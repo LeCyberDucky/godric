@@ -1,0 +1,2 @@
+A tool for sorting good reads Want-to-Read lists. 
+Named after Godric Gryffindor, the original owner of the [Harry Potter sorting hat](https://en.wikipedia.org/wiki/Magical_objects_in_Harry_Potter#Sorting_Hat)

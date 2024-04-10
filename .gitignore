@@ -16,3 +16,5 @@ Cargo.lock
 # Own stuff
 .env
 /Data
+.vscode/settings.json
+Übersicht.md
