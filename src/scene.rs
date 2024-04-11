@@ -19,12 +19,12 @@ pub mod login {
         ServerAddressInput(String),
         ServerPortInput(String),
     }
-    
-        impl Into<crate::common::gui::Message> for Message {
-            fn into(self) -> crate::common::gui::Message {
-                crate::common::gui::Message::LoginScene(self)
-            }
+
+    impl Into<crate::common::gui::Message> for Message {
+        fn into(self) -> crate::common::gui::Message {
+            crate::common::gui::Message::LoginScene(self)
         }
+    }
 
     #[derive(Default)]
     pub struct State {
@@ -128,9 +128,7 @@ pub mod home {
     use super::*;
 
     #[derive(Clone, Debug)]
-    pub enum Message {
-
-    }
+    pub enum Message {}
 
     impl Into<crate::common::gui::Message> for Message {
         fn into(self) -> crate::common::gui::Message {
@@ -140,18 +138,18 @@ pub mod home {
 
     #[derive(Default)]
     struct State {
-        current_book: usize
+        current_book: usize,
     }
 
     impl super::Scene for State {
         type Message = Message;
-    
+
         type Theme = Theme;
-    
+
         fn update(&mut self, message: Self::Message) -> Command<crate::common::gui::Message> {
             todo!()
         }
-    
+
         fn view(&self) -> Element<'_, crate::common::gui::Message, Self::Theme, iced::Renderer> {
             todo!()
         }

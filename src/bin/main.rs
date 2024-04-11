@@ -1,3 +1,4 @@
+use godric::backend::{self, Connection};
 use iced::executor;
 use iced::{Application, Command, Element, Settings, Theme};
 
@@ -9,6 +10,7 @@ pub fn main() -> iced::Result {
 }
 
 struct Godric {
+    backend: backend::Endpoint,
     login_scene: godric::scene::login::State,
 }
 
@@ -21,6 +23,7 @@ impl Application for Godric {
     fn new(_flags: Self::Flags) -> (Self, Command<Self::Message>) {
         (
             Godric {
+                backend: backend::Endpoint::default(),
                 login_scene: godric::scene::login::State::default(),
             },
             Command::none(),
@@ -33,10 +36,14 @@ impl Application for Godric {
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
-            Message::Backend => todo!(),
-            Message::LoginScene(message) => self.login_scene.update(message),
-            _ => Command::none(),
+            Message::Backend(output) => match output {
+                backend::Output::Connection(connection) => 
+                    self.backend.connection = connection,
+            },
+            Message::LoginScene(message) => return self.login_scene.update(message),
+            Message::Home(_) => todo!(),
         }
+        Command::none()
     }
 
     fn view(&self) -> Element<'_, Self::Message, Self::Theme, iced::Renderer> {
