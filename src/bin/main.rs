@@ -1,4 +1,4 @@
-use godric::backend::{self, Connection};
+use godric::backend;
 use iced::executor;
 use iced::{Application, Command, Element, Settings, Theme};
 

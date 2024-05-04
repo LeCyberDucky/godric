@@ -1,9 +1,7 @@
 pub mod home;
 pub mod login;
 
-use iced::executor;
-use iced::widget::pane_grid::state;
-use iced::{application::Application, Command, Element, Settings, Theme};
+use iced::Element;
 
 use crate::backend;
 

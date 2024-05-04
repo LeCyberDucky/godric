@@ -104,7 +104,7 @@ impl Login {
                 let title = iced::widget::text("Server address");
 
                 let address = &self.server_address;
-                let input = iced::widget::TextInput::new("http://127.0.0.1", &address)
+                let input = iced::widget::TextInput::new("http://127.0.0.1", address)
                     .on_input(Message::ServerAddressInput)
                     .padding(10);
                 iced::widget::column!(title, input)
