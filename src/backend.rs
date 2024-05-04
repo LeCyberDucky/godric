@@ -1,3 +1,5 @@
+pub mod initial;
+
 use futures::channel::mpsc;
 use iced::futures::{self, SinkExt};
 
@@ -8,6 +10,17 @@ pub enum Connection {
     #[default]
     Disconnected,
     Connected(mpsc::Sender<Input>),
+}
+
+impl Connection {
+    pub fn send(&mut self, input: Input) {
+        match self {
+            Connection::Disconnected => todo!(),
+            Connection::Connected(connection) => {
+                connection.try_send(input);
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -22,22 +35,24 @@ pub struct Endpoint {
     pub connection: Connection,
 }
 
-pub struct Backend {
+pub struct Backend<S> {
     receiver: mpsc::Receiver<Input>,
     credentials: Option<Credentials>,
+    state: S,
 }
 
-impl Backend {
+impl Backend<initial::Initial> {
     pub fn new(receiver: mpsc::Receiver<Input>) -> Self {
         Self {
             receiver,
             credentials: None,
+            state: initial::Initial {},
         }
     }
 
     pub fn launch() -> iced::subscription::Subscription<Output> {
         iced::subscription::channel(
-            std::any::TypeId::of::<Backend>(),
+            std::any::TypeId::of::<Backend<initial::Initial>>(),
             0,
             |mut output| async move {
                 // Executed only once, even on repeated calls of subscription

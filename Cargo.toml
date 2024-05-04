@@ -8,9 +8,11 @@ edition = "2021"
 [dependencies]
 color-eyre = "0.6.3"
 dotenv = "0.15.0"
-iced = { version = "0.12.1", features = ["tokio", "image"] }
+iced = { version = "0.12.1", features = ["tokio", "image", "canvas"] }
 reqwest = { version = "0.12.2", features = ["cookies", "blocking"] }
 scraper = "0.19.0"
+strum = { version = "0.26.2", features = ["derive"] }
+strum_macros = "0.26.2"
 thirtyfour = "0.31.0"
 tokio = { version = "1.36.0", features = ["full"] }
 url = "2.5.0"
