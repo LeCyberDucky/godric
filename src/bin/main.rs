@@ -5,7 +5,9 @@ use iced::{Application, Command, Element, Settings, Theme};
 use godric::scene::{self, Scene};
 
 pub fn main() -> iced::Result {
-    Godric::run(Settings::default())
+    let mut settings = iced::Settings::default();
+    settings.window.icon = iced::window::icon::from_file("Assets/Logo/Icon - zoomed.jpg").ok();
+    Godric::run(settings)
 }
 
 #[derive(Debug, Clone)]
