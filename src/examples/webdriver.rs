@@ -8,8 +8,8 @@ use thirtyfour::prelude::ElementQueryable;
 async fn main() -> Result<()> {
     dotenv::dotenv()?;
     
-    let email = std::env::var("email")?;
-    let password = std::env::var("password")?;
+    let email = std::env::var("godric_email")?;
+    let password = std::env::var("godric_password")?;
 
     // Set up browser
     let driver_address = std::net::SocketAddrV4::new(std::net::Ipv4Addr::new(127, 0, 0, 1), 4444);

@@ -1,13 +1,17 @@
+use color_eyre::Result;
 use godric::backend;
+use godric::backend::Connection;
 use iced::executor;
-use iced::{Application, Command, Element, Settings, Theme};
+use iced::{Application, Command, Element, Theme};
 
 use godric::scene::{self, Scene};
 
-pub fn main() -> iced::Result {
+pub fn main() -> Result<()> {
+    color_eyre::install()?;
+    let _ = dotenv::dotenv();
     let mut settings = iced::Settings::default();
     settings.window.icon = iced::window::icon::from_file("Assets/Logo/Icon - zoomed.jpg").ok();
-    Godric::run(settings)
+    Ok(Godric::run(settings)?)
 }
 
 #[derive(Debug, Clone)]
@@ -17,7 +21,7 @@ enum Message {
 }
 
 struct Godric {
-    backend: backend::Endpoint,
+    backend: Connection,
     scene: Scene,
     theme: iced::Theme,
 }
@@ -53,12 +57,14 @@ impl Application for Godric {
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
         match message {
             Message::Backend(output) => match output {
-                backend::Output::Connection(connection) => self.backend.connection = connection,
+                backend::Output::Connection(connection) => self.backend = connection,
+                backend::Output::LoggedOut(output) => todo!(),
+                backend::Output::Error(_) => todo!(),
             },
             Message::Scene(message) => {
-                let backend_message = self.scene.update(message);
-                if let Some(message) = backend_message {
-                    self.backend.connection.send(message);
+                // let backend_message = self.scene.update(message);
+                if let Some(message) = self.scene.update(message) {
+                    self.backend.send(message);
                 }
             }
         };
@@ -73,5 +79,9 @@ impl Application for Godric {
             .width(iced::Length::Fill)
             .height(iced::Length::Fill)
             .into()
+    }
+
+    fn subscription(&self) -> iced::Subscription<Self::Message> {
+        backend::Backend::launch().map(Message::Backend)
     }
 }

@@ -2,7 +2,7 @@ use strum::IntoEnumIterator;
 
 use crate::{
     backend,
-    common::helpers::{Browser, Credentials},
+    common::{browser, helpers::Credentials},
     scene::State,
 };
 
@@ -15,24 +15,42 @@ pub enum Message {
     ServerAddressInput(String),
     ServerPortInput(String),
     SettingsClick,
-    BrowserSelected(Browser),
+    BrowserSelected(browser::Browser),
+    BrowserHeadlessToggle(bool),
 }
 
 #[derive(Clone)]
 pub struct Login {
     credentials: Credentials,
-    server_address: String,
-    server_port: String,
-    browser: Browser,
+    browser_driver_ip_input: String,
+    browser_driver_port_input: String,
+    browser_headless: bool,
+    browser: browser::Browser,
 }
 
 impl Default for Login {
     fn default() -> Self {
+        let browser_driver_config = browser::DriverConfig {
+            driver_address: std::net::SocketAddrV4::new(
+                std::net::Ipv4Addr::new(127, 0, 0, 1),
+                4444,
+            ),
+            browser: browser::Browser::Firefox,
+            headless: true,
+        };
+
         Self {
-            credentials: Default::default(),
-            server_address: "http://127.0.0.1".to_string(),
-            server_port: "4444".to_string(),
-            browser: Browser::Firefox,
+            credentials: Credentials {
+                email: std::env::var("godric_email").unwrap_or("".to_string()),
+                password: std::env::var("godric_password").unwrap_or("".to_string()),
+            },
+            browser_driver_ip_input: browser_driver_config.driver_address.ip().to_string(),
+            browser_driver_port_input: browser_driver_config.driver_address.port().to_string(),
+            browser_headless: std::env::var("godric_headless")
+                .ok()
+                .and_then(|string| string.parse().ok())
+                .unwrap_or(true),
+            browser: browser::Browser::Firefox,
         }
     }
 }
@@ -45,18 +63,36 @@ impl From<Login> for State {
 
 impl Login {
     pub fn update(mut self, message: Message) -> (State, Option<backend::Input>) {
+        let mut output = None;
         match message {
             Message::EmailInput(email) => self.credentials.email = email,
             Message::PasswordInput(password) => self.credentials.password = password,
-            Message::AttemptLogin => todo!(),
+            Message::AttemptLogin => {
+                if let Ok(ip) = self.browser_driver_ip_input.parse()
+                    && let Ok(port) = self.browser_driver_port_input.parse()
+                {
+                    output = Some(
+                        backend::logged_out::Input::Login {
+                            credentials: self.credentials.clone(),
+                            browser_driver_config: browser::DriverConfig {
+                                browser: self.browser,
+                                driver_address: std::net::SocketAddrV4::new(ip, port),
+                                headless: self.browser_headless,
+                            },
+                        }
+                        .into(),
+                    )
+                }
+            }
             Message::LoginSuccess => todo!(),
-            Message::ServerAddressInput(address) => self.server_address = address,
-            Message::ServerPortInput(port) => self.server_port = port,
+            Message::ServerAddressInput(address) => self.browser_driver_ip_input = address,
+            Message::ServerPortInput(port) => self.browser_driver_port_input = port,
             Message::SettingsClick => todo!(),
             Message::BrowserSelected(browser) => self.browser = browser,
+            Message::BrowserHeadlessToggle(headless) => self.browser_headless = headless,
         }
 
-        (self.into(), None)
+        (self.into(), output)
     }
 
     pub fn view(&self) -> iced::Element<Message> {
@@ -100,40 +136,47 @@ impl Login {
             .padding(10);
 
         let browser_settings = {
-            let server_address_input = {
-                let title = iced::widget::text("Server address");
-
-                let address = &self.server_address;
-                let input = iced::widget::TextInput::new("http://127.0.0.1", address)
-                    .on_input(Message::ServerAddressInput)
-                    .padding(10);
+            let server_ip_input = {
+                let title = iced::widget::text("Server ip");
+                let input =
+                    iced::widget::TextInput::new("127.0.0.1", &self.browser_driver_ip_input)
+                        .on_input(Message::ServerAddressInput)
+                        .padding(10);
                 iced::widget::column!(title, input)
             };
 
             let server_port_input = {
                 let title = iced::widget::text("Server port");
-                let input = iced::widget::TextInput::new("4444", &self.server_port)
+                let input = iced::widget::TextInput::new("4444", &self.browser_driver_port_input)
                     .on_input(Message::ServerPortInput)
                     .padding(10);
                 iced::widget::column!(title, input)
             };
 
-            let server_selection = {
+            let browser_headless_control = iced::widget::container(
+                iced::widget::checkbox("Headless browser", self.browser_headless)
+                    .on_toggle(Message::BrowserHeadlessToggle),
+            );
+
+            let browser_selection = {
                 iced::widget::container(iced::widget::pick_list(
-                    Browser::iter()
+                    browser::Browser::iter()
                         .map(|browser| browser.to_string())
                         .collect::<Vec<_>>(),
                     Some(self.browser.to_string()),
                     |selection| {
                         Message::BrowserSelected(
-                            Browser::try_from(selection.as_str())
+                            browser::Browser::try_from(selection.as_str())
                                 .expect("Invalid browser selected!"),
                         )
                     },
                 ))
             };
 
-            iced::widget::row!(server_address_input, server_port_input, server_selection)
+            let browser_controls =
+                iced::widget::column!(browser_headless_control, browser_selection).spacing(10);
+
+            iced::widget::row!(server_ip_input, server_port_input, browser_controls)
                 .align_items(iced::Alignment::End)
                 .spacing(10)
                 .padding(10)

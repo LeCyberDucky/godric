@@ -1,9 +1,13 @@
-pub mod initial;
+pub mod home;
+pub mod logged_out;
 
-use futures::channel::mpsc;
-use iced::futures::{self, SinkExt};
+use color_eyre::eyre::ContextCompat;
+use iced::futures::SinkExt;
+use tokio::sync::mpsc;
 
-use crate::common::helpers::Credentials;
+use crate::common::browser;
+
+use self::{home::Home, logged_out::LoggedOut};
 
 #[derive(Debug, Clone, Default)]
 pub enum Connection {
@@ -23,41 +27,64 @@ impl Connection {
     }
 }
 
+pub enum Input {
+    LoggedOut(logged_out::Input),
+}
+
+#[derive(thiserror::Error, Clone, Debug)]
+pub enum Error {
+    #[error("logged out")]
+    LoggedOut(logged_out::Error),
+}
+
 #[derive(Debug, Clone)]
 pub enum Output {
     Connection(Connection),
+    LoggedOut(logged_out::Output),
+    Error(Error),
 }
 
-pub enum Input {}
+#[derive(Clone)]
+enum State {
+    LoggedOut(LoggedOut),
+    Home(Home),
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self::LoggedOut(logged_out::LoggedOut::default())
+    }
+}
 
 #[derive(Default)]
-pub struct Endpoint {
-    pub connection: Connection,
+pub struct Backend {
+    browser: Option<browser::Connection>,
+    state: State,
 }
 
-pub struct Backend<S> {
-    receiver: mpsc::Receiver<Input>,
-    credentials: Option<Credentials>,
-    state: S,
-}
+impl Backend {
+    async fn update(&mut self, input: Input) -> Option<Output> {
+        let (state, output) = match (self.state.clone(), input) {
+            (State::LoggedOut(state), Input::LoggedOut(input)) => {
+                state.update(&mut self.browser, input).await
+            }
+            (State::Home(_), Input::LoggedOut(_)) => todo!(),
+        };
 
-impl Backend<initial::Initial> {
-    pub fn new(receiver: mpsc::Receiver<Input>) -> Self {
-        Self {
-            receiver,
-            credentials: None,
-            state: initial::Initial {},
-        }
+        self.state = state;
+        output
     }
+}
 
+impl Backend {
     pub fn launch() -> iced::subscription::Subscription<Output> {
         iced::subscription::channel(
-            std::any::TypeId::of::<Backend<initial::Initial>>(),
+            std::any::TypeId::of::<Backend>(),
             0,
             |mut output| async move {
                 // Executed only once, even on repeated calls of subscription
-                let (sender, receiver) = mpsc::channel(50);
-                let backend = Backend::new(receiver);
+                let (sender, mut receiver) = mpsc::channel(50);
+                let mut backend = Backend::default();
 
                 output
                     .send(Output::Connection(Connection::Connected(sender)))
@@ -66,7 +93,15 @@ impl Backend<initial::Initial> {
 
                 // Executed continuously, kept alive across calls
                 loop {
-                    std::thread::sleep(std::time::Duration::from_millis(100));
+                    let message = receiver
+                        .recv()
+                        .await
+                        .context("Input connection from GUI closed!")
+                        .unwrap();
+                    // let message = receiver.try_next();
+                    if let Some(message) = backend.update(message).await {
+                        output.send(message);
+                    }
                 }
             },
         )
