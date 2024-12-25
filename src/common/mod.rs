@@ -1,2 +1,2 @@
-pub mod helpers;
 pub mod browser;
+pub mod helpers;

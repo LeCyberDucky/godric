@@ -1,26 +1,39 @@
-pub mod home;
-pub mod login;
-
-use iced::Element;
+pub mod goodreads;
+pub mod launch;
 
 use crate::backend;
+use color_eyre::Result;
+use iced::Element;
+
+type Error = backend::Error;
 
 #[derive(Clone)]
 pub enum State {
-    Login(login::Login),
-    Home(home::Home),
+    Launch(launch::Launch),
+    Goodreads(goodreads::State),
 }
 
 impl Default for State {
     fn default() -> Self {
-        Self::Login(login::Login::default())
+        Self::Launch(launch::Launch::default())
     }
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
-    Login(login::Message),
-    Home(home::Message),
+    Connected,
+    Launch(launch::Message),
+    Goodreads(goodreads::Message),
+}
+
+impl From<crate::backend::Output> for Message {
+    fn from(output: crate::backend::Output) -> Self {
+        match output {
+            backend::Output::Connection(connection) => Self::Connected,
+            backend::Output::Goodreads(output) => Self::Goodreads(output.into()),
+            backend::Output::Uninitialized(output) => Self::Launch(output.into()),
+        }
+    }
 }
 
 #[derive(Default)]
@@ -29,21 +42,24 @@ pub struct Scene {
 }
 
 impl Scene {
-    pub fn update(&mut self, message: Message) -> Option<backend::Input> {
-        let (state, backend_input) = match (self.state.clone(), message) {
-            (State::Login(state), Message::Login(message)) => state.update(message),
-            (State::Home(state), Message::Home(message)) => state.update(message),
-            _ => todo!(),
+    pub fn update(&mut self, message: Result<Message, Error>) -> Option<backend::Input> {
+        let (state, output) = match self.state.clone() {
+            State::Launch(state) => {
+                state.update(message.and_then(|message| launch::Message::try_from(message)))
+            }
+            State::Goodreads(state) => {
+                state.update(message.and_then(|message| goodreads::Message::try_from(message)))
+            }
         };
 
         self.state = state;
-        backend_input
+        output
     }
 
     pub fn view(&self) -> Element<Message> {
         match &self.state {
-            State::Login(state) => state.view().map(Message::Login),
-            State::Home(state) => state.view().map(Message::Home),
+            State::Launch(state) => state.view().map(Message::Launch),
+            State::Goodreads(state) => state.view().map(Message::Goodreads),
         }
     }
 }

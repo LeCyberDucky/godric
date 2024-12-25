@@ -1,13 +1,26 @@
-pub mod home;
-pub mod logged_out;
+pub mod goodreads;
+pub mod uninitialized;
 
-use color_eyre::eyre::ContextCompat;
+use color_eyre::{eyre::ContextCompat, Result};
 use iced::futures::SinkExt;
 use tokio::sync::mpsc;
 
+use self::uninitialized::Uninitialized;
 use crate::common::browser;
 
-use self::{home::Home, logged_out::LoggedOut};
+#[derive(thiserror::Error, Clone, Debug)]
+pub enum Error {
+    #[error(transparent)]
+    Goodreads(#[from] goodreads::Error),
+    #[error("Invalid message ({message}) for state {state}")]
+    InvalidState { state: String, message: String },
+    #[error("Unhandled message: {0}")]
+    UnhandledMessage(String),
+    #[error("Not initialized")]
+    Uninitialized(uninitialized::Error),
+    #[error("Backend unable to reach UI")]
+    UiDisconnected(String),
+}
 
 #[derive(Debug, Clone, Default)]
 pub enum Connection {
@@ -17,93 +30,117 @@ pub enum Connection {
 }
 
 impl Connection {
-    pub fn send(&mut self, input: Input) {
+    pub fn send(&mut self, input: Input) -> Result<(), Error> {
         match self {
             Connection::Disconnected => todo!(),
-            Connection::Connected(connection) => {
-                connection.try_send(input);
-            }
+            Connection::Connected(connection) => connection
+                .try_send(input)
+                .map_err(|error| Error::UiDisconnected(error.to_string())),
         }
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum Input {
-    LoggedOut(logged_out::Input),
-}
-
-#[derive(thiserror::Error, Clone, Debug)]
-pub enum Error {
-    #[error("logged out")]
-    LoggedOut(logged_out::Error),
+    Uninitialized(uninitialized::Input),
+    Goodreads(goodreads::Input),
 }
 
 #[derive(Debug, Clone)]
 pub enum Output {
     Connection(Connection),
-    LoggedOut(logged_out::Output),
-    Error(Error),
+    Goodreads(goodreads::Output),
+    Uninitialized(uninitialized::Output),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 enum State {
-    LoggedOut(LoggedOut),
-    Home(Home),
+    Uninitialized(Uninitialized),
+    Goodreads(goodreads::State),
 }
 
 impl Default for State {
     fn default() -> Self {
-        Self::LoggedOut(logged_out::LoggedOut::default())
+        Self::Uninitialized(uninitialized::Uninitialized::default())
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Backend {
-    browser: Option<browser::Connection>,
+    browser_connection: Option<browser::Connection>,
     state: State,
 }
 
 impl Backend {
-    async fn update(&mut self, input: Input) -> Option<Output> {
-        let (state, output) = match (self.state.clone(), input) {
-            (State::LoggedOut(state), Input::LoggedOut(input)) => {
-                state.update(&mut self.browser, input).await
-            }
-            (State::Home(_), Input::LoggedOut(_)) => todo!(),
+    async fn update(&mut self, input: Input) -> Result<Option<Output>, Error> {
+        dbg!(self.state.clone());
+        dbg!(self.browser_connection.is_some());
+        dbg!(input.clone());
+
+        if let State::Uninitialized(state) = self.state.clone()
+            && let Input::Uninitialized(input) = input
+        {
+            let (state, output) = state.update(&mut self.browser_connection, input).await?;
+            self.state = state;
+            return Ok(output.map(|output| output.into()));
         };
+
+        let connection = self
+            .browser_connection
+            .as_mut()
+            .context("Browser disconnected!")
+            .map_err(|error| uninitialized::Error::BrowserConnection(error.to_string()))?;
+
+        let (state, output) = match self.state.clone() {
+            State::Goodreads(state) => {
+                let (state, output) = state
+                    .update(&mut connection.browser, input.try_into()?)
+                    .await?;
+                (state, Ok(output.map(|output| output.into())))
+            }
+            _ => (
+                self.state.clone(),
+                Err(Error::InvalidState {
+                    state: format!("{:?}", self.state),
+                    message: format!("{input:?}"),
+                }),
+            ),
+        };
+
+        dbg!(output.clone());
 
         self.state = state;
         output
     }
-}
 
-impl Backend {
-    pub fn launch() -> iced::subscription::Subscription<Output> {
-        iced::subscription::channel(
-            std::any::TypeId::of::<Backend>(),
-            0,
-            |mut output| async move {
-                // Executed only once, even on repeated calls of subscription
-                let (sender, mut receiver) = mpsc::channel(50);
-                let mut backend = Backend::default();
+    pub fn launch() -> iced::subscription::Subscription<Result<Output, Error>> {
+        iced::subscription::channel(std::any::TypeId::of::<Backend>(), 0, |mut ui| async move {
+            // Executed only once, even on repeated calls of subscription
+            let (sender, mut receiver) = mpsc::channel(50);
+            let mut backend = Backend::default();
 
-                output
-                    .send(Output::Connection(Connection::Connected(sender)))
+            ui.send(Ok(Output::Connection(Connection::Connected(sender))))
+                .await
+                .expect("Unable to connect to GUI!");
+
+            // Executed continuously, kept alive across calls
+            loop {
+                let message = receiver
+                    .recv()
                     .await
-                    .expect("Unable to connect to GUI!");
+                    .expect("Input connection from GUI closed!");
 
-                // Executed continuously, kept alive across calls
-                loop {
-                    let message = receiver
-                        .recv()
-                        .await
-                        .context("Input connection from GUI closed!")
-                        .unwrap();
-                    // let message = receiver.try_next();
-                    if let Some(message) = backend.update(message).await {
-                        output.send(message);
+                match backend.update(message).await {
+                    Ok(message) => {
+                        if let Some(message) = message {
+                            ui.send(Ok(message)).await;
+                        }
+                    }
+                    Err(error) => {
+                        ui.send(Err(error)).await;
                     }
                 }
-            },
-        )
+            }
+        })
     }
 }

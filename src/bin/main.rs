@@ -1,14 +1,12 @@
 use color_eyre::Result;
-use godric::backend;
-use godric::backend::Connection;
-use iced::executor;
-use iced::{Application, Command, Element, Theme};
+use godric::backend::{self, Connection};
+use iced::{executor, Application, Command, Element, Theme};
 
 use godric::scene::{self, Scene};
 
 pub fn main() -> Result<()> {
     color_eyre::install()?;
-    let _ = dotenv::dotenv();
+    dotenv::dotenv()?;
     let mut settings = iced::Settings::default();
     settings.window.icon = iced::window::icon::from_file("Assets/Logo/Icon - zoomed.jpg").ok();
     Ok(Godric::run(settings)?)
@@ -16,7 +14,7 @@ pub fn main() -> Result<()> {
 
 #[derive(Debug, Clone)]
 enum Message {
-    Backend(backend::Output),
+    Backend(Result<backend::Output, backend::Error>),
     Scene(scene::Message),
 }
 
@@ -55,19 +53,25 @@ impl Application for Godric {
     }
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
-        match message {
-            Message::Backend(output) => match output {
-                backend::Output::Connection(connection) => self.backend = connection,
-                backend::Output::LoggedOut(output) => todo!(),
-                backend::Output::Error(_) => todo!(),
-            },
-            Message::Scene(message) => {
-                // let backend_message = self.scene.update(message);
-                if let Some(message) = self.scene.update(message) {
-                    self.backend.send(message);
+        dbg!(message.clone());
+
+        // Special treatment for establishing initial backend connection
+        if let Message::Backend(ref message) = message {
+            if let Ok(message) = message {
+                if let backend::Output::Connection(connection) = message {
+                    self.backend = connection.clone();
                 }
             }
+        }
+
+        let message = match message {
+            Message::Scene(message) => Ok(message),
+            Message::Backend(output) => output.map(|output| output.into()),
         };
+
+        if let Some(input) = self.scene.update(message) {
+            self.backend.send(input);
+        }
 
         Command::none()
     }
