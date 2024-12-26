@@ -2,13 +2,15 @@ use crate::{
     backend::{self, goodreads::State},
     common::helpers::Credentials,
 };
-use color_eyre::Result;
+use color_eyre::{eyre::Context, Result};
 use thirtyfour as tf;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("Invalid message ({message}) for state {state}")]
-    InvalidState { state: String, message: String }
+    InvalidState { state: String, message: String },
+    #[error(transparent)]
+    Other(#[from] color_eyre::Report)
 }
 
 #[derive(Clone, Debug)]
@@ -66,7 +68,7 @@ impl Welcome {
 
 async fn sign_in_to_goodreads(browser: &mut tf::WebDriver) -> Result<String, Error> {
         let url = url::Url::parse("https://www.goodreads.com/user/sign_in").expect("Failed to parse URL for Goodreads sign in page");
-        // browser.goto(url.as_str()).await?;
+        browser.goto(url.as_str()).await.context("Failed to navigate to sign in page.")?;
 
     //     let email_signin_button = browser.find(tf::By::ClassName("gr-button.gr-button--dark.gr-button--auth.authPortalConnectButton.authPortalSignInButton")).await?;
     // email_signin_button.click().await?;
