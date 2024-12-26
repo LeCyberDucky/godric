@@ -53,7 +53,6 @@ impl Application for Godric {
     }
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
-
         // Special treatment for establishing initial backend connection
         if let Message::Backend(ref message) = message {
             if let Ok(message) = message {

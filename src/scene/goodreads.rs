@@ -44,7 +44,6 @@ impl State {
         mut self,
         message: Result<Message, crate::backend::Error>,
     ) -> (crate::scene::State, Option<crate::backend::Input>) {
-
         let (state, output) = match self {
             State::Welcome(state) => state.update(message.and_then(|message| message.try_into())),
         };
