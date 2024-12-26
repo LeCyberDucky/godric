@@ -5,7 +5,7 @@ use crate::{
 use color_eyre::Result;
 use thirtyfour as tf;
 
-#[derive(thiserror::Error, Debug, Clone)]
+#[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("Invalid message ({message}) for state {state}")]
     InvalidState { state: String, message: String }

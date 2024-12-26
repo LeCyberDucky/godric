@@ -12,7 +12,7 @@ pub fn main() -> Result<()> {
     Ok(Godric::run(settings)?)
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 enum Message {
     Backend(Result<backend::Output, backend::Error>),
     Scene(scene::Message),
@@ -53,7 +53,6 @@ impl Application for Godric {
     }
 
     fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
-        dbg!(message.clone());
 
         // Special treatment for establishing initial backend connection
         if let Message::Backend(ref message) = message {

@@ -8,7 +8,7 @@ use tokio::sync::mpsc;
 use self::uninitialized::Uninitialized;
 use crate::common::browser;
 
-#[derive(thiserror::Error, Clone, Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error(transparent)]
     Goodreads(#[from] goodreads::Error),
@@ -106,8 +106,6 @@ impl Backend {
                 }),
             ),
         };
-
-        dbg!(output.clone());
 
         self.state = state;
         output

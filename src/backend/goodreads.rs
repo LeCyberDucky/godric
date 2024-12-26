@@ -5,7 +5,7 @@ use crate::backend;
 use color_eyre::Result;
 use thirtyfour as tf;
 
-#[derive(thiserror::Error, Clone, Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error(transparent)]
     Welcome(#[from] welcome::Error),
