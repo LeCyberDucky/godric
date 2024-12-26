@@ -8,7 +8,7 @@ use thirtyfour as tf;
 #[derive(thiserror::Error, Debug, Clone)]
 pub enum Error {
     #[error("Invalid message ({message}) for state {state}")]
-    InvalidState { state: String, message: String },
+    InvalidState { state: String, message: String }
 }
 
 #[derive(Clone, Debug)]
@@ -56,6 +56,34 @@ impl Welcome {
         browser: &mut tf::WebDriver,
         input: Input,
     ) -> Result<(State, Option<Output>), Error> {
-        todo!()
+        if let Input::LoginAttempt { credentials } = input {
+            sign_in_to_goodreads(browser).await?;
+        }
+
+        Ok((self.into(), None))
     }
+}
+
+async fn sign_in_to_goodreads(browser: &mut tf::WebDriver) -> Result<String, Error> {
+        let url = url::Url::parse("https://www.goodreads.com/user/sign_in").expect("Failed to parse URL for Goodreads sign in page");
+        // browser.goto(url.as_str()).await?;
+
+    //     let email_signin_button = browser.find(tf::By::ClassName("gr-button.gr-button--dark.gr-button--auth.authPortalConnectButton.authPortalSignInButton")).await?;
+    // email_signin_button.click().await?;
+
+    // let email_field = browser.find(tf::By::Id("ap_email")).await?;
+    // let password_field = browser.find(tf::By::Id("ap_password")).await?;
+    // let signin_button = browser.find(tf::By::Id("signInSubmit")).await?;
+
+    // email_field.send_keys(email).await?;
+    // password_field.send_keys(password).await?;
+    // signin_button.click().await?;
+
+    // // Find user ID and construct link to "want to read" list
+    // // https://www.goodreads.com/user/show/176878294-testy-mctestface
+    // let profile_button = browser.find(tf::By::ClassName("dropdown__trigger.dropdown__trigger--profileMenu.dropdown__trigger--personalNav")).await?;
+    // let user = profile_button.attr("href").await?.context("Unable to find user ID.")?.split('/').last().context("Unable to parse user ID.")?.to_owned();
+    // let user_id = user.split('-').next().context("Unable to extract user ID number.")?.to_owned();
+    // user_id
+    todo!()
 }

@@ -95,28 +95,4 @@ impl Uninitialized {
             }
         }
     }
-
-    async fn sign_in_to_goodreads(browser: &mut tf::WebDriver) -> Result<String, Error> {
-        //     let url = url::Url::parse("https://www.goodreads.com/user/sign_in")?;
-        //     browser.goto(url).await?;
-
-        //     let email_signin_button = browser.find(tf::By::ClassName("gr-button.gr-button--dark.gr-button--auth.authPortalConnectButton.authPortalSignInButton")).await?;
-        // email_signin_button.click().await?;
-
-        // let email_field = browser.find(tf::By::Id("ap_email")).await?;
-        // let password_field = browser.find(tf::By::Id("ap_password")).await?;
-        // let signin_button = browser.find(tf::By::Id("signInSubmit")).await?;
-
-        // email_field.send_keys(email).await?;
-        // password_field.send_keys(password).await?;
-        // signin_button.click().await?;
-
-        // // Find user ID and construct link to "want to read" list
-        // // https://www.goodreads.com/user/show/176878294-testy-mctestface
-        // let profile_button = browser.find(tf::By::ClassName("dropdown__trigger.dropdown__trigger--profileMenu.dropdown__trigger--personalNav")).await?;
-        // let user = profile_button.attr("href").await?.context("Unable to find user ID.")?.split('/').last().context("Unable to parse user ID.")?.to_owned();
-        // let user_id = user.split('-').next().context("Unable to extract user ID number.")?.to_owned();
-        // user_id
-        todo!()
-    }
 }
