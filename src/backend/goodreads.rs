@@ -16,6 +16,7 @@ pub enum Error {
 #[derive(Clone, Debug)]
 pub enum Input {
     Welcome(welcome::Input),
+    Home(home::Input),
 }
 
 impl From<Input> for backend::Input {

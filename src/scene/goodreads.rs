@@ -1,3 +1,4 @@
+pub mod home;
 pub mod welcome;
 
 use color_eyre::Result;
@@ -5,6 +6,7 @@ use color_eyre::Result;
 #[derive(Clone, Debug)]
 pub enum Message {
     Welcome(welcome::Message),
+    Home(home::Message),
 }
 
 impl From<crate::backend::goodreads::Output> for Message {
@@ -31,6 +33,7 @@ impl TryFrom<crate::scene::Message> for Message {
 #[derive(Clone, Debug)]
 pub enum State {
     Welcome(welcome::Welcome),
+    Home(home::Home),
 }
 
 impl From<State> for crate::scene::State {
@@ -46,6 +49,7 @@ impl State {
     ) -> (crate::scene::State, Option<crate::backend::Input>) {
         let (state, output) = match self {
             State::Welcome(state) => state.update(message.and_then(|message| message.try_into())),
+            State::Home(state) => state.update(message.and_then(|message| message.try_into())),
         };
 
         (state.into(), output.map(|output| output.into()))
@@ -54,6 +58,7 @@ impl State {
     pub fn view(&self) -> iced::Element<Message> {
         match self {
             State::Welcome(state) => state.view().map(Message::Welcome),
+            State::Home(state) => state.view().map(Message::Home),
         }
     }
 }

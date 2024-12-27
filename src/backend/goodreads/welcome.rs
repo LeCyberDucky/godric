@@ -36,9 +36,7 @@ impl TryFrom<backend::goodreads::Input> for Input {
 
 #[derive(Clone, Debug)]
 pub enum Output {
-    LoginSuccess {
-        user_id: String
-    }
+    LoginSuccess { user_id: String },
 }
 
 impl From<Output> for backend::goodreads::Output {

@@ -29,13 +29,15 @@ pub enum Message {
     EmailInput(String),
     PasswordInput(String),
     LoginAttempt,
-    LoginSuccess {user_id: String}
+    LoginSuccess { user_id: String },
 }
 
 impl From<crate::backend::goodreads::welcome::Output> for Message {
     fn from(output: crate::backend::goodreads::welcome::Output) -> Self {
         match output {
-            crate::backend::goodreads::welcome::Output::LoginSuccess { user_id } => Self::LoginSuccess { user_id },
+            crate::backend::goodreads::welcome::Output::LoginSuccess { user_id } => {
+                Self::LoginSuccess { user_id }
+            }
         }
     }
 }
@@ -67,7 +69,9 @@ impl Welcome {
                         credentials: self.credentials.clone(),
                     })
                 }
-                Message::LoginSuccess { user_id } => todo!(),
+                Message::LoginSuccess { user_id } => {
+                    state = Some(State::Home(super::home::Home::new(user_id)))
+                }
             },
             Err(error) => todo!(),
         }
