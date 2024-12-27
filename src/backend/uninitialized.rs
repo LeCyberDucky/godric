@@ -1,5 +1,4 @@
 use color_eyre::Result;
-use thirtyfour as tf;
 
 use crate::{
     backend::{self, State},

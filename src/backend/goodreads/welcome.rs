@@ -35,7 +35,11 @@ impl TryFrom<backend::goodreads::Input> for Input {
 }
 
 #[derive(Clone, Debug)]
-pub enum Output {}
+pub enum Output {
+    LoginSuccess {
+        user_id: String
+    }
+}
 
 impl From<Output> for backend::goodreads::Output {
     fn from(output: Output) -> Self {
@@ -58,14 +62,14 @@ impl Welcome {
         browser: &mut tf::WebDriver,
         input: Input,
     ) -> Result<(State, Option<Output>), Error> {
-        if let Input::LoginAttempt { credentials } = input {
-            sign_in_to_goodreads(browser, &credentials).await?;
-        }
+        let Input::LoginAttempt { credentials } = input;
+        let user_id = sign_in_to_goodreads(browser, &credentials).await?;
 
-        Ok((self.into(), None))
+        Ok((self.into(), Some(Output::LoginSuccess { user_id })))
     }
 }
 
+/// Signs in to goodreads.com, returning the user ID-string
 async fn sign_in_to_goodreads(
     browser: &mut tf::WebDriver,
     credentials: &Credentials,
