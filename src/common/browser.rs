@@ -17,7 +17,7 @@ pub enum Browser {
 
 impl Browser {
     pub fn driver(&self) -> String {
-        match self {
+        let mut name = match self {
             Browser::Chrome => todo!(),
             Browser::Chromium => todo!(),
             Browser::Edge => todo!(),
@@ -25,7 +25,13 @@ impl Browser {
             Browser::InternetExplorer => todo!(),
             Browser::Opera => todo!(),
             Browser::Safari => todo!(),
+        };
+
+        if cfg!(target_os = "windows") {
+            name += ".exe";
         }
+
+        name
     }
 }
 
@@ -41,36 +47,52 @@ pub struct Connection {
     driver: Option<std::process::Child>,
 }
 
+impl std::fmt::Debug for Connection {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // tf::WebDriver doesn't like being formatted as Debug
+        f.debug_struct("Connection")
+            .field("driver", &self.driver)
+            .finish()
+    }
+}
+
 impl Connection {
     pub async fn new(config: &DriverConfig) -> Result<Self> {
         // Don't attempt to launch the driver, if a corresponding process already exists
         let driver = (sysinfo::System::processes_by_exact_name(
             &sysinfo::System::new_all(),
-            &config.browser.driver(),
-        ).count() < 1).then_some(Self::launch_driver(&config.browser, &config.driver_address)?);
+            std::ffi::OsStr::new(&config.browser.driver()),
+        )
+        .count()
+            < 1)
+        .then_some(Self::launch_driver(
+            &config.browser,
+            &config.driver_address,
+        )?);
 
         let browser = Self::launch_browser(config).await?;
-        
-        Ok(Self{
-            browser, driver
-        })
+
+        Ok(Self { browser, driver })
     }
 
-    fn launch_driver(browser: &Browser, address: &std::net::SocketAddrV4) -> Result<std::process::Child> {
+    fn launch_driver(
+        browser: &Browser,
+        address: &std::net::SocketAddrV4,
+    ) -> Result<std::process::Child> {
         Ok(std::process::Command::new(browser.driver())
-        .args([
-            "--host",
-            &address.ip().to_string(),
-            "--port",
-            &address.port().to_string(),
-        ])
-        .spawn()?)
+            .args([
+                "--host",
+                &address.ip().to_string(),
+                "--port",
+                &address.port().to_string(),
+            ])
+            .stdout(std::process::Stdio::null())
+            .spawn()?)
     }
 
     async fn launch_browser(config: &DriverConfig) -> Result<tf::WebDriver> {
-        let driver_address = url::Url::parse(
-            &("http://".to_string() + config.driver_address.to_string().as_str()),
-        )?;
+        let driver_address =
+            url::Url::parse(&("http://".to_string() + config.driver_address.to_string().as_str()))?;
 
         let mut browser_capabilities = match config.browser {
             Browser::Chrome => todo!(),
@@ -82,13 +104,9 @@ impl Connection {
             Browser::Safari => todo!(),
         };
         if config.headless {
-            browser_capabilities
-                .set_headless()?
+            browser_capabilities.set_headless()?
         }
 
-        Ok(
-            tf::WebDriver::new(driver_address.as_str(), browser_capabilities)
-                .await?,
-        )
+        Ok(tf::WebDriver::new(driver_address.as_str(), browser_capabilities).await?)
     }
 }
