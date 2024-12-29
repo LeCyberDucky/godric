@@ -194,8 +194,7 @@ impl Launch {
         );
 
         let launch_button = iced::widget::Button::new(
-            iced::widget::Container::new("Launch!")
-                .center_x(iced::Length::Fill),
+            iced::widget::Container::new("Launch!").center_x(iced::Length::Fill),
         )
         .on_press(Message::LaunchAttempt)
         .width(iced::Length::Fill);

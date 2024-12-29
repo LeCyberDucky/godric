@@ -111,8 +111,8 @@ impl Backend {
         output
     }
 
-    pub fn launch() -> iced::subscription::Subscription<Result<Output, Error>> {
-        iced::subscription::channel(std::any::TypeId::of::<Backend>(), 0, |mut ui| async move {
+    pub fn launch() -> impl iced::futures::Stream<Item = Result<Output, Error>> {
+        iced::stream::channel(0, |mut ui| async move {
             // Executed only once, even on repeated calls of subscription
             let (sender, mut receiver) = mpsc::channel(50);
             let mut backend = Backend::default();

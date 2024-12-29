@@ -1,15 +1,23 @@
-use color_eyre::Result;
-use godric::backend::{self, Connection};
-use iced::{executor, Application, Command, Element, Theme};
+use godric::{
+    backend::{self, Connection},
+    scene::{self, Scene},
+};
 
-use godric::scene::{self, Scene};
+use color_eyre::Result;
+use iced::{Element, Subscription, Task};
 
 pub fn main() -> Result<()> {
     color_eyre::install()?;
     dotenv::dotenv()?;
-    let mut settings = iced::Settings::default();
-    settings.window.icon = iced::window::icon::from_file("Assets/Logo/Icon - zoomed.jpg").ok();
-    Ok(Godric::run(settings)?)
+    let godric = Godric::default();
+    Ok(iced::application("Godric", update, view)
+        .theme(theme)
+        .subscription(backend_subscription)
+        .window(iced::window::Settings {
+            icon: iced::window::icon::from_file("Assets/Logo/Icon - zoomed.jpg").ok(),
+            ..Default::default()
+        })
+        .run()?)
 }
 
 #[derive(Debug)]
@@ -34,56 +42,41 @@ impl Default for Godric {
     }
 }
 
-impl Application for Godric {
-    type Executor = executor::Default;
-    type Message = Message;
-    type Theme = Theme;
-    type Flags = ();
-
-    fn new(_flags: Self::Flags) -> (Self, Command<Self::Message>) {
-        (Godric::default(), Command::none())
-    }
-
-    fn title(&self) -> String {
-        String::from("Godric")
-    }
-
-    fn theme(&self) -> Self::Theme {
-        self.theme.clone()
-    }
-
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
-        // Special treatment for establishing initial backend connection
-        if let Message::Backend(ref message) = message {
-            if let Ok(message) = message {
-                if let backend::Output::Connection(connection) = message {
-                    self.backend = connection.clone();
-                }
+fn update(state: &mut Godric, message: Message) -> Task<Message> {
+    // Special treatment for establishing initial backend connection
+    if let Message::Backend(ref message) = message {
+        if let Ok(message) = message {
+            if let backend::Output::Connection(connection) = message {
+                state.backend = connection.clone();
             }
         }
-
-        let message = match message {
-            Message::Scene(message) => Ok(message),
-            Message::Backend(output) => output.map(|output| output.into()),
-        };
-
-        if let Some(input) = self.scene.update(message) {
-            self.backend.send(input);
-        }
-
-        Command::none()
     }
 
-    fn view(&self) -> Element<Message> {
-        let content = self.scene.view().map(Message::Scene);
+    let message = match message {
+        Message::Scene(message) => Ok(message),
+        Message::Backend(output) => output.map(|output| output.into()),
+    };
 
-        iced::widget::container(content)
-            .width(iced::Length::Fill)
-            .height(iced::Length::Fill)
-            .into()
+    if let Some(input) = state.scene.update(message) {
+        state.backend.send(input);
     }
 
-    fn subscription(&self) -> iced::Subscription<Self::Message> {
-        backend::Backend::launch().map(Message::Backend)
-    }
+    Task::none()
+}
+
+fn view(state: &Godric) -> Element<Message> {
+    let content = state.scene.view().map(Message::Scene);
+
+    iced::widget::container(content)
+        .width(iced::Length::Fill)
+        .height(iced::Length::Fill)
+        .into()
+}
+
+fn backend_subscription(state: &Godric) -> Subscription<Message> {
+    Subscription::run(backend::Backend::launch).map(Message::Backend)
+}
+
+fn theme(state: &Godric) -> iced::Theme {
+    state.theme.clone()
 }

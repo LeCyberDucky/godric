@@ -107,8 +107,7 @@ impl Welcome {
 
         let login_button = iced::widget::Container::new(
             iced::widget::Button::new(
-                iced::widget::Container::new("Sign in!")
-                    .center_x(iced::Length::Fill),
+                iced::widget::Container::new("Sign in!").center_x(iced::Length::Fill),
             )
             .on_press(Message::LoginAttempt)
             .width(iced::Length::Fill),
