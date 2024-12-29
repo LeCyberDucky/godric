@@ -2,7 +2,6 @@ pub mod goodreads;
 pub mod uninitialized;
 
 use color_eyre::{eyre::ContextCompat, Result};
-use iced::futures::SinkExt;
 use tokio::sync::mpsc;
 
 use self::uninitialized::Uninitialized;
@@ -54,7 +53,7 @@ pub enum Output {
 }
 
 #[derive(Clone, Debug)]
-enum State {
+pub enum State {
     Uninitialized(Uninitialized),
     Goodreads(goodreads::State),
 }
@@ -72,7 +71,7 @@ pub struct Backend {
 }
 
 impl Backend {
-    async fn update(&mut self, input: Input) -> Result<Option<Output>, Error> {
+    pub async fn update(&mut self, input: Input) -> Result<Option<Output>, Error> {
         dbg!(self.state.clone());
         dbg!(self.browser_connection.is_some());
         dbg!(input.clone());
@@ -109,36 +108,5 @@ impl Backend {
 
         self.state = state;
         output
-    }
-
-    pub fn launch() -> impl iced::futures::Stream<Item = Result<Output, Error>> {
-        iced::stream::channel(0, |mut ui| async move {
-            // Executed only once, even on repeated calls of subscription
-            let (sender, mut receiver) = mpsc::channel(50);
-            let mut backend = Backend::default();
-
-            ui.send(Ok(Output::Connection(Connection::Connected(sender))))
-                .await
-                .expect("Unable to connect to GUI!");
-
-            // Executed continuously, kept alive across calls
-            loop {
-                let message = receiver
-                    .recv()
-                    .await
-                    .expect("Input connection from GUI closed!");
-
-                match backend.update(message).await {
-                    Ok(message) => {
-                        if let Some(message) = message {
-                            ui.send(Ok(message)).await;
-                        }
-                    }
-                    Err(error) => {
-                        ui.send(Err(error)).await;
-                    }
-                }
-            }
-        })
     }
 }

@@ -4,12 +4,12 @@ use godric::{
 };
 
 use color_eyre::Result;
-use iced::{Element, Subscription, Task};
+use iced::{futures::SinkExt, Element, Subscription, Task};
+use tokio::sync::mpsc;
 
 pub fn main() -> Result<()> {
     color_eyre::install()?;
     dotenv::dotenv()?;
-    let godric = Godric::default();
     Ok(iced::application("Godric", update, view)
         .theme(theme)
         .subscription(backend_subscription)
@@ -73,10 +73,42 @@ fn view(state: &Godric) -> Element<Message> {
         .into()
 }
 
-fn backend_subscription(state: &Godric) -> Subscription<Message> {
-    Subscription::run(backend::Backend::launch).map(Message::Backend)
-}
-
 fn theme(state: &Godric) -> iced::Theme {
     state.theme.clone()
+}
+
+fn backend_subscription(_state: &Godric) -> Subscription<Message> {
+    Subscription::run(|| {
+        iced::stream::channel(0, |mut ui| async move {
+            // Executed only once, even on repeated calls of subscription
+            let (sender, mut receiver) = mpsc::channel(50);
+            let mut backend = crate::backend::Backend::default();
+
+            ui.send(Ok(crate::backend::Output::Connection(
+                Connection::Connected(sender),
+            )))
+            .await
+            .expect("Unable to connect to GUI!");
+
+            // Executed continuously, kept alive across calls
+            loop {
+                let message = receiver
+                    .recv()
+                    .await
+                    .expect("Input connection from GUI closed!");
+
+                match backend.update(message).await {
+                    Ok(message) => {
+                        if let Some(message) = message {
+                            ui.send(Ok(message)).await;
+                        }
+                    }
+                    Err(error) => {
+                        ui.send(Err(error)).await;
+                    }
+                }
+            }
+        })
+    })
+    .map(Message::Backend)
 }
