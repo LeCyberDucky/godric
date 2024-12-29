@@ -171,16 +171,14 @@ impl Launch {
                 iced::widget::column!(browser_headless_control, browser_selection).spacing(10);
 
             iced::widget::row!(server_ip_input, server_port_input, browser_controls)
-                .align_items(iced::Alignment::End)
+                .align_y(iced::Alignment::End)
                 .spacing(10)
                 .padding(10)
         };
 
         let image = iced::widget::container(iced::widget::image("Assets/Logo/Welcome.png"))
-            .height(iced::Length::Fill)
-            .width(iced::Length::Fill)
-            .center_x()
-            .center_y();
+            .center_x(iced::Length::Fill)
+            .center_y(iced::Length::Fill);
 
         let mode_selection = iced::widget::pick_list(
             crate::common::helpers::Mode::iter()
@@ -196,9 +194,7 @@ impl Launch {
         );
 
         let launch_button = iced::widget::Button::new(
-            iced::widget::Container::new("Launch!")
-                .width(iced::Length::Fill)
-                .center_x(),
+            iced::widget::Container::new("Launch!").center_x(iced::Length::Fill),
         )
         .on_press(Message::LaunchAttempt)
         .width(iced::Length::Fill);
@@ -206,17 +202,15 @@ impl Launch {
         let launch_prompt = iced::widget::column!(mode_selection, launch_button)
             .spacing(10)
             .padding(10)
-            .align_items(iced::Alignment::Center);
+            .align_x(iced::Alignment::Center);
 
         let content = iced::widget::column!(browser_settings, image, launch_prompt)
             .width(iced::Length::Fill)
             .height(iced::Length::Fill);
 
         iced::widget::Container::new(content)
-            .width(iced::Length::Fill)
-            .height(iced::Length::Fill)
-            .center_x()
-            .center_y()
+            .center_x(iced::Length::Fill)
+            .center_y(iced::Length::Fill)
             .into()
     }
 }

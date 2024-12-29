@@ -84,10 +84,8 @@ impl Welcome {
 
     pub fn view(&self) -> iced::Element<Message> {
         let image = iced::widget::container(iced::widget::image("Assets/Logo/Welcome.png"))
-            .height(iced::Length::Fill)
-            .width(iced::Length::Fill)
-            .center_x()
-            .center_y();
+            .center_x(iced::Length::Fill)
+            .center_y(iced::Length::Fill);
 
         let email_input = {
             let title = iced::widget::text("E-Mail");
@@ -109,14 +107,12 @@ impl Welcome {
 
         let login_button = iced::widget::Container::new(
             iced::widget::Button::new(
-                iced::widget::Container::new("Sign in!")
-                    .width(iced::Length::Fill)
-                    .center_x(),
+                iced::widget::Container::new("Sign in!").center_x(iced::Length::Fill),
             )
             .on_press(Message::LoginAttempt)
             .width(iced::Length::Fill),
         )
-        .center_x();
+        .center_x(iced::Length::Fill);
 
         let login_prompt = iced::widget::column!(login_details, login_button)
             .spacing(10)
@@ -127,10 +123,8 @@ impl Welcome {
             .height(iced::Length::Fill);
 
         iced::widget::Container::new(content)
-            .width(iced::Length::Fill)
-            .height(iced::Length::Fill)
-            .center_x()
-            .center_y()
+            .center_x(iced::Length::Fill)
+            .center_y(iced::Length::Fill)
             .into()
     }
 }
