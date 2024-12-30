@@ -9,6 +9,8 @@ use thirtyfour as tf;
 pub enum Error {
     #[error(transparent)]
     Welcome(#[from] welcome::Error),
+    #[error(transparent)]
+    Home(#[from] home::Error),
     #[error("Invalid message ({message}) for state {state}")]
     InvalidState { state: String, message: String },
 }
@@ -53,6 +55,7 @@ impl From<Output> for backend::Output {
 #[derive(Clone, Debug)]
 pub enum State {
     Welcome(welcome::Welcome),
+    Home(home::Home),
 }
 
 impl Default for State {
@@ -72,9 +75,10 @@ impl State {
         self,
         browser: &mut tf::WebDriver,
         input: Input,
-    ) -> Result<(backend::State, Option<Output>), Error> {
+    ) -> Result<(backend::State, Option<backend::Output>), Error> {
         let (state, output) = match self {
             State::Welcome(state) => state.update(browser, input.try_into()?).await?,
+            State::Home(state) => state.update(browser, input.try_into()?).await?,
         };
 
         Ok((state.into(), output.map(|output| output.into())))

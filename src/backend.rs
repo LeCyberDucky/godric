@@ -95,7 +95,7 @@ impl Backend {
                 let (state, output) = state
                     .update(&mut connection.browser, input.try_into()?)
                     .await?;
-                (state, Ok(output.map(|output| output.into())))
+                (state, Ok(output))
             }
             _ => (
                 self.state.clone(),
