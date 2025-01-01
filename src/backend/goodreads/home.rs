@@ -1,15 +1,8 @@
-use crate::{
-    backend::{
-        self,
-        goodreads::{self, State},
-    },
-    common::book::{self, BookInfo},
-};
+use crate::backend::goodreads::{self, book::BookInfo, State};
 use color_eyre::{
     eyre::{Context, ContextCompat},
     Result,
 };
-use rand::Rng;
 use scraper::{Html, Selector};
 use thirtyfour as tf;
 
@@ -50,7 +43,7 @@ pub enum Output {}
 #[derive(Clone, Debug)]
 pub struct Home {
     user_id: String,
-    books: Vec<book::BookInfo>,
+    books: Vec<BookInfo>,
 }
 
 impl From<Home> for State {
@@ -74,7 +67,7 @@ impl Home {
     }
 }
 
-async fn fetch_books(user_id: &str) -> Result<Vec<book::BookInfo>, Error> {
+async fn fetch_books(user_id: &str) -> Result<Vec<BookInfo>, Error> {
     let bookshelf_link = url::Url::parse(&format!(
         "https://www.goodreads.com/review/list/{user_id}?shelf=to-read"
     ))
