@@ -68,7 +68,9 @@ impl Welcome {
         let Input::LoginAttempt { credentials } = input;
         let user_id = sign_in_to_goodreads(browser, &credentials).await?;
 
-        let state = Home::new(user_id.clone()).await;
+        let state = Home::new(user_id.clone())
+            .await
+            .context("Failed to switch to Home state")?;
         Ok((state.into(), Some(Output::LoginSuccess { user_id }.into())))
     }
 }

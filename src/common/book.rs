@@ -1,5 +1,10 @@
-pub type BookID = String;
+#[derive(Clone, Debug)]
+pub struct BookInfo {
+    pub title: String,
+    pub url: url::Url,
+}
 
 struct Book {
-    id: BookID,
+    title: String,
+    url: url::Url,
 }
