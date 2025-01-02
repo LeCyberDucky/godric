@@ -90,7 +90,7 @@ async fn fetch_books(user_id: &str) -> Result<Vec<BookInfo>, Error> {
 
         // Don't want to DOS Amazon with our handful of requests
         let sleep_time = 20 + (10.0 * rand::random::<f64>()) as u64;
-        tokio::time::sleep(std::time::Duration::from_millis(sleep_time));
+        tokio::time::sleep(std::time::Duration::from_millis(sleep_time)).await;
 
         let bookshelf = client
             .get(link)
