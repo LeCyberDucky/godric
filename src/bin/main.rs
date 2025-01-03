@@ -4,7 +4,7 @@ use godric::{
 };
 
 use color_eyre::Result;
-use iced::{futures::SinkExt, Element, Subscription, Task};
+use iced::{Element, Subscription, Task, futures::SinkExt};
 use tokio::sync::mpsc;
 
 pub fn main() -> Result<()> {

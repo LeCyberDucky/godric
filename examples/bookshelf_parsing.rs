@@ -1,6 +1,6 @@
 use color_eyre::{
-    eyre::{Context, ContextCompat},
     Result,
+    eyre::{Context, ContextCompat},
 };
 use scraper::{Html, Selector};
 

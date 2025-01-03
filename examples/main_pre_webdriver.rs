@@ -1,6 +1,6 @@
 use std::fs::read_to_string;
 
-use color_eyre::eyre::{bail, eyre, ContextCompat, Ok, Result};
+use color_eyre::eyre::{ContextCompat, Ok, Result, bail, eyre};
 use scraper::{Html, Selector};
 
 fn main() -> Result<()> {

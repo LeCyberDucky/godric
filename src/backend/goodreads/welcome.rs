@@ -5,7 +5,7 @@ use crate::{
     },
     common::helpers::Credentials,
 };
-use color_eyre::{eyre::Context, eyre::ContextCompat, Result};
+use color_eyre::{Result, eyre::Context, eyre::ContextCompat};
 use thirtyfour as tf;
 
 use super::home::Home;

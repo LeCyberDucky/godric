@@ -1,7 +1,7 @@
-use crate::backend::goodreads::{self, book::BookInfo, State};
+use crate::backend::goodreads::{self, State, book::BookInfo};
 use color_eyre::{
-    eyre::{Context, ContextCompat},
     Result,
+    eyre::{Context, ContextCompat},
 };
 use scraper::{Html, Selector};
 use thirtyfour as tf;

@@ -48,6 +48,10 @@ impl TryFrom<crate::scene::goodreads::Message> for Message {
     fn try_from(message: crate::scene::goodreads::Message) -> Result<Self, Self::Error> {
         match message {
             super::Message::Welcome(message) => Ok(message),
+            _ => Err(Self::Error::InvalidState {
+                state: "Welcome".into(),
+                message: format!("{:?}", message),
+            }),
         }
     }
 }

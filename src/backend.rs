@@ -1,7 +1,7 @@
 pub mod goodreads;
 pub mod uninitialized;
 
-use color_eyre::{eyre::ContextCompat, Result};
+use color_eyre::{Result, eyre::ContextCompat};
 use tokio::sync::mpsc;
 
 use self::uninitialized::Uninitialized;
