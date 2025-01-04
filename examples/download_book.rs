@@ -7,6 +7,7 @@ async fn main() -> Result<()> {
         "https://www.goodreads.com/book/show/72193.Harry_Potter_and_the_Philosopher_s_Stone",
     )?;
     let client = reqwest::Client::new();
-    Book::fetch(link, &client).await;
+    let book = Book::fetch(link, &client).await?;
+    dbg!(book);
     Ok(())
 }
