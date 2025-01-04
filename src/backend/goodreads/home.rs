@@ -178,7 +178,7 @@ fn parse_bookshelf_page_books(page: &str) -> Result<Vec<Result<(usize, BookInfo)
                 .trim()
                 .to_string();
             let link = book.attr("href").context("Failed to obtain book link")?;
-            let link = url::Url::parse("https://goodreads.com")
+            let link = url::Url::parse("https://www.goodreads.com")
                 .unwrap()
                 .join(link)
                 .context("Failed to create book link")?;
