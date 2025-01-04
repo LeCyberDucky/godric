@@ -4,7 +4,7 @@ use scraper::{Html, Selector};
 #[derive(Clone, Debug, thiserror::Error)]
 pub enum Error {
     #[error("{0}")]
-    Other(String)
+    Other(String),
 }
 
 impl From<color_eyre::eyre::ErrReport> for Error {
@@ -30,7 +30,8 @@ impl Book {
             .await
             .context("Unable to load book page")?
             .text()
-            .await.context("Unable to read book page")?;
+            .await
+            .context("Unable to read book page")?;
 
         let (title, author, blurb, image_source) = {
             let page = Html::parse_document(&page);
@@ -70,7 +71,14 @@ impl Book {
             (title, author, blurb, image_source)
         };
 
-        let cover = client.get(image_source).send().await.context("Failed to request cover image")?.bytes().await.context("Failed to download cover image")?;
+        let cover = client
+            .get(image_source)
+            .send()
+            .await
+            .context("Failed to request cover image")?
+            .bytes()
+            .await
+            .context("Failed to download cover image")?;
         let cover = iced::widget::image::Handle::from_bytes(cover);
 
         Ok(Self {

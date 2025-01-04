@@ -1,4 +1,5 @@
 use godric::{
+    Message,
     backend::{self, Connection},
     scene::{self, Scene},
 };
@@ -18,12 +19,6 @@ pub fn main() -> Result<()> {
             ..Default::default()
         })
         .run_with(|| (Godric::default(), Task::none()))?)
-}
-
-#[derive(Debug)]
-enum Message {
-    Backend(Result<backend::Output, backend::Error>),
-    Scene(scene::Message),
 }
 
 struct Godric {
@@ -58,11 +53,12 @@ impl Godric {
             Message::Backend(output) => output.map(|output| output.into()),
         };
 
-        if let Some(input) = self.scene.update(message) {
+        let (input, task) = self.scene.update(message);
+        if let Some(input) = input {
             self.backend.send(input);
         }
 
-        Task::none()
+        task
     }
 
     fn view(&self) -> Element<Message> {

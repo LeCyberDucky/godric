@@ -1,8 +1,5 @@
 use crate::{
-    backend::{
-        self,
-        goodreads::{self, State},
-    },
+    backend::goodreads::{self, State},
     common::helpers::Credentials,
 };
 use color_eyre::{Result, eyre::Context, eyre::ContextCompat};
@@ -41,7 +38,7 @@ impl TryFrom<goodreads::Input> for Input {
 
 #[derive(Clone, Debug)]
 pub enum Output {
-    LoginSuccess { user_id: String },
+    LoginSuccess { books: Vec<super::book::BookInfo> },
 }
 
 impl From<Output> for goodreads::Output {
@@ -67,11 +64,12 @@ impl Welcome {
     ) -> Result<(State, Option<goodreads::Output>), Error> {
         let Input::LoginAttempt { credentials } = input;
         let user_id = sign_in_to_goodreads(browser, &credentials).await?;
-
-        let state = Home::new(user_id.clone())
+        let books = super::home::fetch_books(&user_id)
             .await
             .context("Failed to switch to Home state")?;
-        Ok((state.into(), Some(Output::LoginSuccess { user_id }.into())))
+
+        let state = Home::new(user_id, books.clone());
+        Ok((state.into(), Some(Output::LoginSuccess { books }.into())))
     }
 }
 

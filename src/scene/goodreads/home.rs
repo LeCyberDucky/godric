@@ -1,6 +1,12 @@
 use crate::{
     backend::goodreads::book::BookInfo,
-    scene::goodreads::{book::{self, Book}, State},
+    scene::{
+        self,
+        goodreads::{
+            State,
+            book::{self, Book},
+        },
+    },
 };
 
 use color_eyre::Result;
@@ -11,8 +17,7 @@ use iced::{
 
 #[derive(Clone, Debug)]
 pub struct Home {
-    user_id: String,
-    books: Vec<Option<Result<Book, book::Error>>>
+    books: Vec<Option<Result<Book, book::Error>>>,
 }
 
 impl From<Home> for State {
@@ -26,10 +31,16 @@ pub enum Message {
     BookFetched(Result<Book, book::Error>),
 }
 
-impl TryFrom<crate::scene::goodreads::Message> for Message {
+impl From<Message> for scene::goodreads::Message {
+    fn from(message: Message) -> Self {
+        Self::Home(message)
+    }
+}
+
+impl TryFrom<scene::goodreads::Message> for Message {
     type Error = crate::backend::Error;
 
-    fn try_from(message: crate::scene::goodreads::Message) -> Result<Self, Self::Error> {
+    fn try_from(message: scene::goodreads::Message) -> Result<Self, Self::Error> {
         match message {
             super::Message::Home(message) => Ok(message),
             _ => Err(Self::Error::InvalidState {
@@ -41,28 +52,36 @@ impl TryFrom<crate::scene::goodreads::Message> for Message {
 }
 
 impl Home {
-    pub fn new(user_id: String) -> Self {
-        Self { user_id, books: vec![] }
+    pub fn new(books: Vec<Option<Result<Book, book::Error>>>) -> Self {
+        Self { books }
     }
 
     pub fn update(
         mut self,
         message: Result<Message, crate::backend::Error>,
-    ) -> (State, Option<crate::backend::goodreads::Input>) {
+    ) -> (
+        State,
+        Option<crate::backend::goodreads::Input>,
+        Task<scene::goodreads::Message>,
+    ) {
         let mut output: Option<crate::backend::goodreads::home::Input> = None;
         let mut state = None;
 
         match message {
             Ok(message) => match message {
-                Message::BookFetched(book) => todo!(),
+                Message::BookFetched(book) => {
+                    dbg!(&book);
+                    self.books.insert(0, Some(book));
+                    self.books.pop();
+                }
             },
             Err(error) => todo!(),
         }
 
-
         (
             state.unwrap_or(self.into()),
             output.map(|output| output.into()),
+            Task::none(),
         )
     }
 
@@ -71,15 +90,16 @@ impl Home {
     }
 }
 
-fn fetch_books(books: &Vec<BookInfo>) -> impl Stream<Item = Result<Book, book::Error>> {
-    iced::stream::try_channel(1, move |mut output| async move {
+pub fn fetch_books(books: Vec<BookInfo>) -> impl Stream<Item = Result<Book, book::Error>> {
+    iced::stream::channel(1, move |mut output| async move {
+        let number_of_books = books.len();
         let client = reqwest::Client::new();
-        for BookInfo { title, url } in books {
-            let book = Book::fetch(url.clone(), &client).await?;
+        for (i, BookInfo { title, url }) in books.into_iter().enumerate() {
+            println!("Fetching book {i}/{}:", number_of_books);
+            println!("Url: {url}");
+            let book = Book::fetch(url, &client).await;
             output.send(book).await;
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         }
-
-        Ok(())
     })
 }

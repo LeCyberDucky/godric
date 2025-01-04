@@ -1,3 +1,4 @@
+use iced::Task;
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -89,7 +90,10 @@ impl From<Launch> for State {
 }
 
 impl Launch {
-    pub fn update(mut self, message: Result<Message, Error>) -> (State, Option<backend::Input>) {
+    pub fn update(
+        mut self,
+        message: Result<Message, Error>,
+    ) -> (State, Option<backend::Input>, Task<crate::scene::Message>) {
         let mut output = None;
         let mut state = None;
         match message.expect("Failed to launch.") {
@@ -125,7 +129,7 @@ impl Launch {
             Message::BackendConnected => println!("Backend connected!"),
         };
 
-        (state.unwrap_or(self.into()), output)
+        (state.unwrap_or(self.into()), output, Task::none())
     }
 
     pub fn view(&self) -> iced::Element<Message> {

@@ -53,9 +53,8 @@ impl From<Home> for State {
 }
 
 impl Home {
-    pub async fn new(user_id: String) -> Result<Self, Error> {
-        let books = fetch_books(&user_id).await?;
-        Ok(Self { user_id, books })
+    pub fn new(user_id: String, books: Vec<BookInfo>) -> Self {
+        Self { user_id, books }
     }
 
     pub async fn update(
@@ -67,7 +66,7 @@ impl Home {
     }
 }
 
-async fn fetch_books(user_id: &str) -> Result<Vec<BookInfo>, Error> {
+pub async fn fetch_books(user_id: &str) -> Result<Vec<BookInfo>, Error> {
     let bookshelf_link = url::Url::parse(&format!(
         "https://www.goodreads.com/review/list/{user_id}?shelf=to-read"
     ))
@@ -85,6 +84,7 @@ async fn fetch_books(user_id: &str) -> Result<Vec<BookInfo>, Error> {
 
     let mut books = vec![];
     for i in 1..=parse_bookshelf_page_count(&bookshelf)? {
+        println!("Fetching bookshelf page {i}");
         let mut link = bookshelf_link.clone();
         link.query_pairs_mut().append_pair("page", &i.to_string());
 
