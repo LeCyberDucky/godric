@@ -13,6 +13,7 @@ use color_eyre::Result;
 use iced::{
     Task,
     futures::{SinkExt, Stream},
+    widget::scrollable,
 };
 
 #[derive(Clone, Debug)]
@@ -28,7 +29,9 @@ impl From<Home> for State {
 
 #[derive(Clone, Debug)]
 pub enum Message {
-    BookFetched(Result<Book, book::Error>),
+    BookFetched((usize, Result<Book, book::Error>)),
+    Scrolled(scrollable::Viewport),
+    Click,
 }
 
 impl From<Message> for scene::goodreads::Message {
@@ -69,10 +72,16 @@ impl Home {
 
         match message {
             Ok(message) => match message {
-                Message::BookFetched(book) => {
-                    dbg!(&book);
-                    self.books.insert(0, Some(book));
-                    self.books.pop();
+                Message::BookFetched((i, book)) => {
+                    if let Err(ref error) = book {
+                        println!("{error}");
+                    }
+
+                    self.books[i] = Some(book);
+                }
+                Message::Click => todo!(),
+                Message::Scrolled(viewport) => {
+                    println!("Scrolled!");
                 }
             },
             Err(error) => todo!(),
@@ -86,19 +95,67 @@ impl Home {
     }
 
     pub fn view(&self) -> iced::Element<Message> {
-        todo!()
+        const COVER_PLACEHOLDER_DATA: &'static [u8] =
+            include_bytes!(r"..\..\..\Assets\Icons\cover_placeholder.jpg");
+        let cover_placeholder = iced::widget::image::Handle::from_bytes(COVER_PLACEHOLDER_DATA);
+
+        let covers: Vec<_> = self
+            .books
+            .iter()
+            .map(|book| match book {
+                Some(book) => match book {
+                    Ok(book) => book.cover(),
+                    Err(error) => &cover_placeholder,
+                },
+                None => &cover_placeholder,
+            })
+            .collect();
+
+        let mut covers: Vec<_> = covers
+            .iter()
+            .map(|cover| {
+                iced::widget::button(iced::widget::image(cover.clone()))
+                    .on_press(Message::Click)
+                    .width(iced::Length::Fixed(100.0))
+                    .padding(iced::Padding::new(2.0))
+            })
+            .collect();
+
+        let grid_height = 3;
+        let grid_spacing = 0;
+        scrollable(
+            iced::widget::row({
+                let mut columns = vec![];
+                while grid_height <= covers.len() {
+                    columns.push(covers.drain(..grid_height).collect::<Vec<_>>());
+                }
+                columns.push(covers.drain(..).collect::<Vec<_>>());
+
+                columns.into_iter().map(|covers| {
+                    iced::widget::column(covers.into_iter().map(|cover| iced::Element::new(cover)))
+                        .spacing(grid_spacing)
+                        .into()
+                })
+            })
+            .spacing(grid_spacing),
+        )
+        .direction(scrollable::Direction::Horizontal(
+            scrollable::Scrollbar::new().anchor(scrollable::Anchor::default()),
+        ))
+        .on_scroll(Message::Scrolled)
+        .into()
     }
 }
 
-pub fn fetch_books(books: Vec<BookInfo>) -> impl Stream<Item = Result<Book, book::Error>> {
+pub fn fetch_books(books: Vec<BookInfo>) -> impl Stream<Item = (usize, Result<Book, book::Error>)> {
     iced::stream::channel(1, move |mut output| async move {
         let number_of_books = books.len();
         let client = reqwest::Client::new();
         for (i, BookInfo { title, url }) in books.into_iter().enumerate() {
-            println!("Fetching book {i}/{}:", number_of_books);
+            println!("Fetching book {}/{}:", i + 1, number_of_books);
             println!("Url: {url}");
             let book = Book::fetch(url, &client).await;
-            output.send(book).await;
+            output.send((i, book)).await;
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         }
     })

@@ -89,4 +89,8 @@ impl Book {
             cover,
         })
     }
+
+    pub fn cover(&self) -> &iced::widget::image::Handle {
+        &self.cover
+    }
 }

@@ -82,9 +82,11 @@ pub async fn fetch_books(user_id: &str) -> Result<Vec<BookInfo>, Error> {
         .await
         .context("Failed to read bookshelf content")?;
 
+    // https://stackoverflow.com/questions/51044467/how-can-i-perform-parallel-asynchronous-http-get-requests-with-reqwest
     let mut books = vec![];
-    for i in 1..=parse_bookshelf_page_count(&bookshelf)? {
-        println!("Fetching bookshelf page {i}");
+    let page_count = parse_bookshelf_page_count(&bookshelf)?;
+    for i in 1..=page_count {
+        println!("Fetching bookshelf page {i}/{page_count}");
         let mut link = bookshelf_link.clone();
         link.query_pairs_mut().append_pair("page", &i.to_string());
 

@@ -92,7 +92,10 @@ impl Welcome {
                     );
                 }
             },
-            Err(error) => todo!(),
+            Err(error) => {
+                dbg!(error);
+                todo!()
+            }
         }
 
         (

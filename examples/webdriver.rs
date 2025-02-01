@@ -81,10 +81,10 @@ async fn main() -> Result<()> {
         .to_owned();
 
     let bookshelf_link = "https://www.goodreads.com/review/list/".to_owned() + user.as_str();
-    let bookshelf_link = url::Url::parse_with_params(&bookshelf_link, &[
-        ("shelf", "to-read"),
-        ("sort", "position"),
-    ])?;
+    let bookshelf_link = url::Url::parse_with_params(
+        &bookshelf_link,
+        &[("shelf", "to-read"), ("sort", "position")],
+    )?;
 
     browser.goto(bookshelf_link).await?;
 
