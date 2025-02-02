@@ -16,9 +16,10 @@ use iced::{
     widget::scrollable,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Home {
     books: Vec<Option<Result<Book, book::Error>>>,
+    selected_book: Option<usize>
 }
 
 impl From<Home> for State {
@@ -30,7 +31,7 @@ impl From<Home> for State {
 #[derive(Clone, Debug)]
 pub enum Message {
     BookFetched((usize, Result<Book, book::Error>)),
-    Click,
+    BookSelected(usize),
 }
 
 impl From<Message> for scene::goodreads::Message {
@@ -55,7 +56,7 @@ impl TryFrom<scene::goodreads::Message> for Message {
 
 impl Home {
     pub fn new(books: Vec<Option<Result<Book, book::Error>>>) -> Self {
-        Self { books }
+        Self { books, ..Default::default() }
     }
 
     pub fn update(
@@ -78,7 +79,7 @@ impl Home {
 
                     self.books[i] = Some(book);
                 }
-                Message::Click => todo!(),
+                Message::BookSelected(selection) => self.selected_book = Some(selection),
             },
             Err(error) => todo!(),
         }
@@ -109,9 +110,10 @@ impl Home {
 
         let mut covers: Vec<_> = covers
             .iter()
-            .map(|cover| {
+            .enumerate()
+            .map(|(i, cover)| {
                 iced::widget::button(iced::widget::image(cover.clone()))
-                    .on_press(Message::Click)
+                    .on_press(Message::BookSelected(i))
                     .width(iced::Length::Fixed(100.0))
                     .padding(iced::Padding::new(2.0))
             })
