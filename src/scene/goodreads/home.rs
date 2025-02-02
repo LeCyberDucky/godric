@@ -30,7 +30,6 @@ impl From<Home> for State {
 #[derive(Clone, Debug)]
 pub enum Message {
     BookFetched((usize, Result<Book, book::Error>)),
-    Scrolled(scrollable::Viewport),
     Click,
 }
 
@@ -80,9 +79,6 @@ impl Home {
                     self.books[i] = Some(book);
                 }
                 Message::Click => todo!(),
-                Message::Scrolled(viewport) => {
-                    println!("Scrolled!");
-                }
             },
             Err(error) => todo!(),
         }
@@ -142,7 +138,6 @@ impl Home {
         .direction(scrollable::Direction::Horizontal(
             scrollable::Scrollbar::new().anchor(scrollable::Anchor::default()),
         ))
-        .on_scroll(Message::Scrolled)
         .into()
     }
 }
