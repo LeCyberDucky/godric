@@ -1,13 +1,13 @@
 use std::io::{BufRead, Read};
 
-use color_eyre::eyre::{bail, eyre, ContextCompat, Ok, Result};
+use color_eyre::eyre::{ContextCompat, Ok, Result, bail, eyre};
 use thirtyfour as tf;
 use thirtyfour::prelude::ElementQueryable;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     dotenv::dotenv()?;
-    
+
     let email = std::env::var("godric_email")?;
     let password = std::env::var("godric_password")?;
 
@@ -15,11 +15,17 @@ async fn main() -> Result<()> {
     let driver_address = std::net::SocketAddrV4::new(std::net::Ipv4Addr::new(127, 0, 0, 1), 4444);
 
     let mut driver = std::process::Command::new("geckodriver")
-    .args(["--host", &driver_address.ip().to_string(), "--port", &driver_address.port().to_string()])
-    .stdout(std::process::Stdio::piped())
-    .spawn()?;
+        .args([
+            "--host",
+            &driver_address.ip().to_string(),
+            "--port",
+            &driver_address.port().to_string(),
+        ])
+        .stdout(std::process::Stdio::piped())
+        .spawn()?;
 
-    let driver_address = url::Url::parse(&("http://".to_string() + driver_address.to_string().as_str()))?;
+    let driver_address =
+        url::Url::parse(&("http://".to_string() + driver_address.to_string().as_str()))?;
 
     // let driver_address = {
     //     let stdout = driver.stdout.context("Unable to read output of spawning driver!")?;
@@ -31,7 +37,11 @@ async fn main() -> Result<()> {
 
     let mut browser_settings = tf::DesiredCapabilities::firefox();
     // browser_settings.set_headless()?;
-    let browser = tf::WebDriver::new(driver_address.as_str(), /*"http://localhost:4444",*/ browser_settings).await?;
+    let browser = tf::WebDriver::new(
+        driver_address.as_str(),
+        /*"http://localhost:4444",*/ browser_settings,
+    )
+    .await?;
 
     // Sign in
     let url = url::Url::parse("https://www.goodreads.com/user/sign_in")?;
@@ -50,25 +60,51 @@ async fn main() -> Result<()> {
 
     // Find user ID and construct link to "want to read" list
     // https://www.goodreads.com/user/show/176878294-testy-mctestface
-    let profile_button = browser.find(tf::By::ClassName("dropdown__trigger.dropdown__trigger--profileMenu.dropdown__trigger--personalNav")).await?;
-    let user = profile_button.attr("href").await?.context("Unable to find user ID.")?.split('/').last().context("Unable to parse user ID.")?.to_owned();
+    let profile_button = browser
+        .find(tf::By::ClassName(
+            "dropdown__trigger.dropdown__trigger--profileMenu.dropdown__trigger--personalNav",
+        ))
+        .await?;
+    let user = profile_button
+        .attr("href")
+        .await?
+        .context("Unable to find user ID.")?
+        .split('/')
+        .last()
+        .context("Unable to parse user ID.")?
+        .to_owned();
     dbg!(&user);
-    let user_id = user.split('-').next().context("Unable to extract user ID number.")?.to_owned();
+    let user_id = user
+        .split('-')
+        .next()
+        .context("Unable to extract user ID number.")?
+        .to_owned();
 
     let bookshelf_link = "https://www.goodreads.com/review/list/".to_owned() + user.as_str();
-    let bookshelf_link = url::Url::parse_with_params(&bookshelf_link, &[("shelf","to-read"), ("sort", "position")])?;
+    let bookshelf_link = url::Url::parse_with_params(
+        &bookshelf_link,
+        &[("shelf", "to-read"), ("sort", "position")],
+    )?;
 
     browser.goto(bookshelf_link).await?;
 
     // Obtain list of books
-    let mut books = browser.find_all(tf::By::ClassName("bookalike.review")).await?;
+    let mut books = browser
+        .find_all(tf::By::ClassName("bookalike.review"))
+        .await?;
     let mut book_count = 0;
 
     while book_count != books.len() {
         book_count = books.len();
-        books.last().context("No books found!")?.scroll_into_view().await?;
+        books
+            .last()
+            .context("No books found!")?
+            .scroll_into_view()
+            .await?;
         std::thread::sleep(std::time::Duration::from_secs(1));
-        books = browser.find_all(tf::By::ClassName("bookalike.review")).await?;
+        books = browser
+            .find_all(tf::By::ClassName("bookalike.review"))
+            .await?;
     }
 
     std::thread::sleep(std::time::Duration::from_secs(5));
@@ -82,12 +118,17 @@ async fn main() -> Result<()> {
     // position_field.focus().await?;
     // position_field.scroll_into_view().await?;
     position_field.focus().await?;
-    position_field.send_keys(tf::Key::Control + "a".to_string()).await?;
-    position_field.send_keys(tf::Key::Delete.to_string()).await?;
+    position_field
+        .send_keys(tf::Key::Control + "a".to_string())
+        .await?;
+    position_field
+        .send_keys(tf::Key::Delete.to_string())
+        .await?;
     position_field.send_keys("5").await?;
     // position_field.click().await?;
-    browser.execute(&format!("savePositionChanges({});", user_id), vec![]).await?;
-
+    browser
+        .execute(&format!("savePositionChanges({});", user_id), vec![])
+        .await?;
 
     // let mut book_texts = vec![];
     // for book in books {
@@ -99,9 +140,6 @@ async fn main() -> Result<()> {
     std::thread::sleep(std::time::Duration::from_secs(10));
 
     browser.quit().await?;
-
-
-
 
     // let elem_form = driver.find(tf::By::Id("search-form")).await?;
 
@@ -122,10 +160,8 @@ async fn main() -> Result<()> {
     // // Always explicitly close the browser.
     // driver.quit().await?;
 
-
     // // let button = &Selector::parse("div.third_party_sign_in").unwrap();
 
-    
     // let url = url::Url::parse("https://www.goodreads.com/user/edit?ref=nav_profile_settings")?;
 
     Ok(())

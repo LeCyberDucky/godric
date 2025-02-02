@@ -1,21 +1,24 @@
-use color_eyre::Result;
-use godric::backend::{self, Connection};
-use iced::{executor, Application, Command, Element, Theme};
+use godric::{
+    Message,
+    backend::{self, Connection},
+    scene::{self, Scene},
+};
 
-use godric::scene::{self, Scene};
+use color_eyre::Result;
+use iced::{Element, Subscription, Task, futures::SinkExt};
+use tokio::sync::mpsc;
 
 pub fn main() -> Result<()> {
     color_eyre::install()?;
     dotenv::dotenv()?;
-    let mut settings = iced::Settings::default();
-    settings.window.icon = iced::window::icon::from_file("Assets/Logo/Icon - zoomed.jpg").ok();
-    Ok(Godric::run(settings)?)
-}
-
-#[derive(Debug)]
-enum Message {
-    Backend(Result<backend::Output, backend::Error>),
-    Scene(scene::Message),
+    Ok(iced::application("Godric", Godric::update, Godric::view)
+        .theme(Godric::theme)
+        .subscription(Godric::backend_subscription)
+        .window(iced::window::Settings {
+            icon: iced::window::icon::from_file("Assets/Logo/Icon - zoomed.jpg").ok(),
+            ..Default::default()
+        })
+        .run_with(|| (Godric::default(), Task::none()))?)
 }
 
 struct Godric {
@@ -34,25 +37,8 @@ impl Default for Godric {
     }
 }
 
-impl Application for Godric {
-    type Executor = executor::Default;
-    type Message = Message;
-    type Theme = Theme;
-    type Flags = ();
-
-    fn new(_flags: Self::Flags) -> (Self, Command<Self::Message>) {
-        (Godric::default(), Command::none())
-    }
-
-    fn title(&self) -> String {
-        String::from("Godric")
-    }
-
-    fn theme(&self) -> Self::Theme {
-        self.theme.clone()
-    }
-
-    fn update(&mut self, message: Self::Message) -> Command<Self::Message> {
+impl Godric {
+    fn update(&mut self, message: Message) -> Task<Message> {
         // Special treatment for establishing initial backend connection
         if let Message::Backend(ref message) = message {
             if let Ok(message) = message {
@@ -67,11 +53,12 @@ impl Application for Godric {
             Message::Backend(output) => output.map(|output| output.into()),
         };
 
-        if let Some(input) = self.scene.update(message) {
+        let (input, task) = self.scene.update(message);
+        if let Some(input) = input {
             self.backend.send(input);
         }
 
-        Command::none()
+        task
     }
 
     fn view(&self) -> Element<Message> {
@@ -83,7 +70,43 @@ impl Application for Godric {
             .into()
     }
 
-    fn subscription(&self) -> iced::Subscription<Self::Message> {
-        backend::Backend::launch().map(Message::Backend)
+    fn theme(&self) -> iced::Theme {
+        self.theme.clone()
+    }
+
+    fn backend_subscription(&self) -> Subscription<Message> {
+        Subscription::run(|| {
+            iced::stream::channel(0, |mut ui| async move {
+                // Executed only once, even on repeated calls of subscription
+                let (sender, mut receiver) = mpsc::channel(50);
+                let mut backend = crate::backend::Backend::default();
+
+                ui.send(Ok(crate::backend::Output::Connection(
+                    Connection::Connected(sender),
+                )))
+                .await
+                .expect("Unable to connect to GUI!");
+
+                // Executed continuously, kept alive across calls
+                loop {
+                    let message = receiver
+                        .recv()
+                        .await
+                        .expect("Input connection from GUI closed!");
+
+                    match backend.update(message).await {
+                        Ok(message) => {
+                            if let Some(message) = message {
+                                ui.send(Ok(message)).await;
+                            }
+                        }
+                        Err(error) => {
+                            ui.send(Err(error)).await;
+                        }
+                    }
+                }
+            })
+        })
+        .map(Message::Backend)
     }
 }

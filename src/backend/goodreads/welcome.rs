@@ -1,9 +1,11 @@
 use crate::{
-    backend::{self, goodreads::State},
+    backend::goodreads::{self, State},
     common::helpers::Credentials,
 };
-use color_eyre::{eyre::Context, eyre::ContextCompat, Result};
+use color_eyre::{Result, eyre::Context, eyre::ContextCompat};
 use thirtyfour as tf;
+
+use super::home::Home;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -18,16 +20,16 @@ pub enum Input {
     LoginAttempt { credentials: Credentials },
 }
 
-impl From<Input> for backend::goodreads::Input {
+impl From<Input> for goodreads::Input {
     fn from(input: Input) -> Self {
         Self::Welcome(input)
     }
 }
 
-impl TryFrom<backend::goodreads::Input> for Input {
+impl TryFrom<goodreads::Input> for Input {
     type Error = Error;
 
-    fn try_from(input: backend::goodreads::Input) -> Result<Self, Self::Error> {
+    fn try_from(input: goodreads::Input) -> Result<Self, Self::Error> {
         match input {
             super::Input::Welcome(input) => Ok(input),
         }
@@ -36,12 +38,10 @@ impl TryFrom<backend::goodreads::Input> for Input {
 
 #[derive(Clone, Debug)]
 pub enum Output {
-    LoginSuccess {
-        user_id: String
-    }
+    LoginSuccess { books: Vec<super::book::BookInfo> },
 }
 
-impl From<Output> for backend::goodreads::Output {
+impl From<Output> for goodreads::Output {
     fn from(output: Output) -> Self {
         Self::Welcome(output)
     }
@@ -61,11 +61,15 @@ impl Welcome {
         self,
         browser: &mut tf::WebDriver,
         input: Input,
-    ) -> Result<(State, Option<Output>), Error> {
+    ) -> Result<(State, Option<goodreads::Output>), Error> {
         let Input::LoginAttempt { credentials } = input;
         let user_id = sign_in_to_goodreads(browser, &credentials).await?;
+        let books = super::home::fetch_books(&user_id)
+            .await
+            .context("Failed to switch to Home state")?;
 
-        Ok((self.into(), Some(Output::LoginSuccess { user_id })))
+        let state = Home::new(user_id, books.clone());
+        Ok((state.into(), Some(Output::LoginSuccess { books }.into())))
     }
 }
 

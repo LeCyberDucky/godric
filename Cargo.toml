@@ -1,7 +1,7 @@
 [package]
 name = "godric"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 default-run = "main"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -9,13 +9,14 @@ default-run = "main"
 [dependencies]
 color-eyre = "0.6.3"
 dotenv = "0.15.0"
-iced = { version = "0.12", features = ["tokio", "image", "canvas"] }
-reqwest = { version = "0.12.7", features = ["cookies", "blocking"] }
+iced = { version = "0.13", features = ["tokio", "image", "canvas"] }
+rand = "0.8.5"
+reqwest = { version = "0.12.10", features = ["cookies", "blocking"] }
 scraper = "0.20.0"
 strum = { version = "0.26.3", features = ["derive"] }
 strum_macros = "0.26.4"
 sysinfo = "0.31.4"
 thirtyfour = "0.34.0"
-thiserror = "1.0.64"
-tokio = { version = "1.40.0", features = ["full"] }
-url = "2.5.2"
+thiserror = "1.0.69"
+tokio = { version = "1.42.0", features = ["full"] }
+url = "2.5.4"

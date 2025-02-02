@@ -1,6 +1,10 @@
-use crate::{common::helpers::Credentials, scene::goodreads::State};
+use crate::{
+    common::helpers::Credentials,
+    scene::{self, goodreads::State},
+};
 
 use color_eyre::Result;
+use iced::Task;
 
 #[derive(Clone, Debug)]
 pub struct Welcome {
@@ -29,23 +33,31 @@ pub enum Message {
     EmailInput(String),
     PasswordInput(String),
     LoginAttempt,
-    LoginSuccess {user_id: String}
+    LoginSuccess {
+        books: Vec<crate::backend::goodreads::book::BookInfo>,
+    },
 }
 
 impl From<crate::backend::goodreads::welcome::Output> for Message {
     fn from(output: crate::backend::goodreads::welcome::Output) -> Self {
         match output {
-            crate::backend::goodreads::welcome::Output::LoginSuccess { user_id } => Self::LoginSuccess { user_id },
+            crate::backend::goodreads::welcome::Output::LoginSuccess { books } => {
+                Self::LoginSuccess { books }
+            }
         }
     }
 }
 
-impl TryFrom<crate::scene::goodreads::Message> for Message {
+impl TryFrom<scene::goodreads::Message> for Message {
     type Error = crate::backend::Error;
 
-    fn try_from(message: crate::scene::goodreads::Message) -> Result<Self, Self::Error> {
+    fn try_from(message: scene::goodreads::Message) -> Result<Self, Self::Error> {
         match message {
             super::Message::Welcome(message) => Ok(message),
+            _ => Err(Self::Error::InvalidState {
+                state: "Welcome".into(),
+                message: format!("{:?}", message),
+            }),
         }
     }
 }
@@ -54,9 +66,14 @@ impl Welcome {
     pub fn update(
         mut self,
         message: Result<Message, crate::backend::Error>,
-    ) -> (State, Option<crate::backend::goodreads::Input>) {
+    ) -> (
+        State,
+        Option<crate::backend::goodreads::Input>,
+        Task<scene::goodreads::Message>,
+    ) {
         let mut output = None;
         let mut state = None;
+        let mut task = Task::none();
 
         match message {
             Ok(message) => match message {
@@ -67,23 +84,31 @@ impl Welcome {
                         credentials: self.credentials.clone(),
                     })
                 }
-                Message::LoginSuccess { user_id } => todo!(),
+                Message::LoginSuccess { books } => {
+                    state = Some(State::Home(super::home::Home::new(vec![None; books.len()])));
+                    task = Task::run(
+                        super::home::fetch_books(books),
+                        super::home::Message::BookFetched,
+                    );
+                }
             },
-            Err(error) => todo!(),
+            Err(error) => {
+                dbg!(error);
+                todo!()
+            }
         }
 
         (
             state.unwrap_or(self.into()),
             output.map(|output| output.into()),
+            task.map(|message| message.into()),
         )
     }
 
     pub fn view(&self) -> iced::Element<Message> {
         let image = iced::widget::container(iced::widget::image("Assets/Logo/Welcome.png"))
-            .height(iced::Length::Fill)
-            .width(iced::Length::Fill)
-            .center_x()
-            .center_y();
+            .center_x(iced::Length::Fill)
+            .center_y(iced::Length::Fill);
 
         let email_input = {
             let title = iced::widget::text("E-Mail");
@@ -105,14 +130,12 @@ impl Welcome {
 
         let login_button = iced::widget::Container::new(
             iced::widget::Button::new(
-                iced::widget::Container::new("Sign in!")
-                    .width(iced::Length::Fill)
-                    .center_x(),
+                iced::widget::Container::new("Sign in!").center_x(iced::Length::Fill),
             )
             .on_press(Message::LoginAttempt)
             .width(iced::Length::Fill),
         )
-        .center_x();
+        .center_x(iced::Length::Fill);
 
         let login_prompt = iced::widget::column!(login_details, login_button)
             .spacing(10)
@@ -123,10 +146,8 @@ impl Welcome {
             .height(iced::Length::Fill);
 
         iced::widget::Container::new(content)
-            .width(iced::Length::Fill)
-            .height(iced::Length::Fill)
-            .center_x()
-            .center_y()
+            .center_x(iced::Length::Fill)
+            .center_y(iced::Length::Fill)
             .into()
     }
 }

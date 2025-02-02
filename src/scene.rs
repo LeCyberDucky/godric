@@ -3,7 +3,7 @@ pub mod launch;
 
 use crate::backend;
 use color_eyre::Result;
-use iced::Element;
+use iced::{Element, Task};
 
 type Error = backend::Error;
 
@@ -26,6 +26,12 @@ pub enum Message {
     Goodreads(goodreads::Message),
 }
 
+impl From<Message> for crate::Message {
+    fn from(message: Message) -> Self {
+        Self::Scene(message)
+    }
+}
+
 impl From<crate::backend::Output> for Message {
     fn from(output: crate::backend::Output) -> Self {
         match output {
@@ -42,8 +48,11 @@ pub struct Scene {
 }
 
 impl Scene {
-    pub fn update(&mut self, message: Result<Message, Error>) -> Option<backend::Input> {
-        let (state, output) = match self.state.clone() {
+    pub fn update(
+        &mut self,
+        message: Result<Message, Error>,
+    ) -> (Option<backend::Input>, Task<crate::Message>) {
+        let (state, output, task) = match self.state.clone() {
             State::Launch(state) => {
                 state.update(message.and_then(|message| launch::Message::try_from(message)))
             }
@@ -53,7 +62,7 @@ impl Scene {
         };
 
         self.state = state;
-        output
+        (output, task.map(|message| message.into()))
     }
 
     pub fn view(&self) -> Element<Message> {
