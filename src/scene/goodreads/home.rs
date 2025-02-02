@@ -74,7 +74,7 @@ impl Home {
             Ok(message) => match message {
                 Message::BookFetched((i, book)) => {
                     if let Err(ref error) = book {
-                        println!("{error}");
+                        todo!("{error}")
                     }
 
                     self.books[i] = Some(book);
