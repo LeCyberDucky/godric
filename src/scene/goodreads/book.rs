@@ -18,17 +18,17 @@ impl From<color_eyre::eyre::ErrReport> for Error {
 
 #[derive(Clone, Debug)]
 pub struct Book {
-    url: url::Url,
-    title: String,
-    author: String,
-    blurb: String,
-    cover: iced::widget::image::Handle,
+    pub url: url::Url,
+    pub title: String,
+    pub author: String,
+    pub blurb: String,
+    pub cover: iced::widget::image::Handle,
 }
 
 impl Default for Book {
     fn default() -> Self {
         let url = url::Url::parse("https://127.0.0.1").expect("Failed to parse loopback ip");
-        let title = "Placeholders for dummies".to_string();
+        let title = "Placeholders for dummies, First Edition".to_string();
         let author = "Max Mustermann".to_string();
         let blurb = "Lorem ipsum dolor sit amet, consectetur adipisici elit, sed eiusmod tempor incidunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquid ex ea commodi consequat. Quis aute iure reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint obcaecat cupiditat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.".to_string();
         let cover = iced::widget::image::Handle::from_bytes(COVER_PLACEHOLDER_DATA);
@@ -108,9 +108,5 @@ impl Book {
             blurb,
             cover,
         })
-    }
-
-    pub fn cover(&self) -> &iced::widget::image::Handle {
-        &self.cover
     }
 }

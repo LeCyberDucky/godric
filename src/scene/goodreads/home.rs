@@ -101,7 +101,7 @@ impl Home {
             .iter()
             .map(|book| match book {
                 Some(book) => match book {
-                    Ok(book) => book.cover(),
+                    Ok(book) => &book.cover,
                     Err(error) => &cover_placeholder,
                 },
                 None => &cover_placeholder,
