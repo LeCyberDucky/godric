@@ -3,6 +3,7 @@ use color_eyre::{
     Result,
     eyre::{Context, ContextCompat},
 };
+use iced::futures::stream::{FuturesUnordered, StreamExt};
 use scraper::{Html, Selector};
 use thirtyfour as tf;
 
@@ -83,31 +84,44 @@ pub async fn fetch_books(user_id: &str) -> Result<Vec<BookInfo>, Error> {
         .context("Failed to read bookshelf content")?;
 
     // https://stackoverflow.com/questions/51044467/how-can-i-perform-parallel-asynchronous-http-get-requests-with-reqwest
-    let mut books = vec![];
     let page_count = parse_bookshelf_page_count(&bookshelf)?;
-    for i in 1..=page_count {
-        println!("Fetching bookshelf page {i}/{page_count}");
+    let mut bookshelf_requests = vec![];
+    for page in 1..=page_count {
         let mut link = bookshelf_link.clone();
-        link.query_pairs_mut().append_pair("page", &i.to_string());
+        link.query_pairs_mut()
+            .append_pair("page", &page.to_string());
+        let client = &client;
+        bookshelf_requests.push(async move {
+            // Don't want to DOS Amazon with our handful of requests
+            let sleep_time = 100 + (100.0 * rand::random::<f64>()) as u64;
+            tokio::time::sleep(std::time::Duration::from_millis(sleep_time)).await;
 
-        // Don't want to DOS Amazon with our handful of requests
-        let sleep_time = 20 + (10.0 * rand::random::<f64>()) as u64;
-        tokio::time::sleep(std::time::Duration::from_millis(sleep_time)).await;
+            println!("Fetching bookshelf page {page}/{page_count}");
 
-        let bookshelf = client
-            .get(link)
-            .send()
-            .await
-            .context("Unable to load bookshelf")?
-            .text()
-            .await
-            .context("Failed to read bookshelf content")?;
-
-        books.append(&mut parse_bookshelf_page_books(&bookshelf)?)
+            let bookshelf = client
+                .get(link)
+                .send()
+                .await
+                .context("Unable to load bookshelf")?
+                .text()
+                .await
+                .context("Failed to read bookshelf content")?;
+            parse_bookshelf_page_books(&bookshelf)
+        });
     }
+    let bookshelf_pages: Vec<_> = iced::futures::stream::iter(bookshelf_requests)
+        .buffer_unordered(5)
+        .collect::<Vec<_>>()
+        .await
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()?;
 
-    // Flatten to one big result, and sort collection of books according to user sorting
-    let mut books: Vec<(usize, BookInfo)> = books.into_iter().collect::<Result<_, _>>()?;
+    let mut books: Vec<_> = bookshelf_pages
+        .into_iter()
+        .flatten()
+        .collect::<Result<_, _>>()?;
+
+    // Sort collection of books according to user sorting
     books.sort_by(|a, b| a.0.cmp(&b.0));
     let books: Vec<_> = books.into_iter().map(|entry| entry.1).collect();
 
