@@ -19,7 +19,7 @@ use iced::{
 #[derive(Clone, Debug, Default)]
 pub struct Home {
     books: Vec<Option<Result<Book, book::Error>>>,
-    selected_book: Option<usize>
+    selected_book: Option<usize>,
 }
 
 impl From<Home> for State {
@@ -56,7 +56,10 @@ impl TryFrom<scene::goodreads::Message> for Message {
 
 impl Home {
     pub fn new(books: Vec<Option<Result<Book, book::Error>>>) -> Self {
-        Self { books, ..Default::default() }
+        Self {
+            books,
+            ..Default::default()
+        }
     }
 
     pub fn update(
@@ -92,10 +95,42 @@ impl Home {
     }
 
     pub fn view(&self) -> iced::Element<Message> {
-        const COVER_PLACEHOLDER_DATA: &'static [u8] =
-            include_bytes!(r"..\..\..\Assets\Icons\cover_placeholder.jpg");
-        let cover_placeholder = iced::widget::image::Handle::from_bytes(COVER_PLACEHOLDER_DATA);
+        /*******************
+         * Book comparison *
+         *******************/
+        // Display cover
+        // Display title
+        // Display author
+        // Display blurb
+        // Display page count
 
+        let book = if let Some(id) = self.selected_book
+            && let Some(book) = &self.books[id]
+        {
+            book
+        } else {
+            &Ok(book::Book::default())
+        };
+
+        let book = book
+            .as_ref()
+            .expect("Handling of books that failed to download not yet implemented");
+
+        let comparisons = iced::widget::row![
+            self.book_comparison(book.clone()),
+            self.book_comparison(book::Book::default())
+        ];
+
+        // let book = match self.selected_book {
+        //     Some(id) => self.books[id],
+        //     None => todo!(),
+        // };
+
+        /*****************
+         * Grid of books *
+         *****************/
+        let cover_placeholder =
+            iced::widget::image::Handle::from_bytes(book::COVER_PLACEHOLDER_DATA);
         let covers: Vec<_> = self
             .books
             .iter()
@@ -109,10 +144,10 @@ impl Home {
             .collect();
 
         let mut covers: Vec<_> = covers
-            .iter()
+            .into_iter()
             .enumerate()
             .map(|(i, cover)| {
-                iced::widget::button(iced::widget::image(cover.clone()))
+                iced::widget::button(iced::widget::image(cover))
                     .on_press(Message::BookSelected(i))
                     .width(iced::Length::Fixed(100.0))
                     .padding(iced::Padding::new(2.0))
@@ -121,7 +156,7 @@ impl Home {
 
         let grid_height = 3;
         let grid_spacing = 0;
-        scrollable(
+        let book_grid = scrollable(
             iced::widget::row({
                 let mut columns = vec![];
                 while grid_height <= covers.len() {
@@ -138,9 +173,29 @@ impl Home {
             .spacing(grid_spacing),
         )
         .direction(scrollable::Direction::Horizontal(
-            scrollable::Scrollbar::new().anchor(scrollable::Anchor::default()),
+            scrollable::Scrollbar::new(),
         ))
-        .into()
+        .into();
+
+        book_grid
+    }
+
+    fn book_comparison(&self, book: book::Book) -> iced::Element<Message> {
+        // let book = book::Book::default();
+        let comparison = iced::widget::row![
+            iced::widget::image(book.cover).height(iced::Fill),
+            iced::widget::column![
+                iced::widget::container(iced::widget::text(book.title)).padding(5),
+                iced::widget::container(iced::widget::text(book.author)).padding(5),
+                iced::widget::horizontal_rule(2),
+                iced::widget::scrollable(
+                    iced::widget::container(iced::widget::text(book.blurb)).padding(5)
+                )
+                .direction(scrollable::Direction::Vertical(scrollable::Scrollbar::new())) // .spacing(5)
+            ]
+        ];
+
+        comparison.into()
     }
 }
 
