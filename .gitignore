@@ -21,3 +21,4 @@ Cargo.lock
 /Assets/Logo/Source
 /Assets/Icons
 /src/bin/sandbox*.rs
+examples/iced_sandbox.rs
