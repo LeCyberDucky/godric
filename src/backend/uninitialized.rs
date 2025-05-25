@@ -90,6 +90,7 @@ impl Uninitialized {
                         State::Goodreads(backend::goodreads::welcome::Welcome::default().into()),
                         Some(Output::Initialized(mode.into()).into()),
                     )),
+                    Mode::Steam => todo!(),
                 }
             }
         }

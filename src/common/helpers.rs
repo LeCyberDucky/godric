@@ -9,4 +9,5 @@ pub struct Credentials {
 )]
 pub enum Mode {
     Goodreads,
+    Steam,
 }
