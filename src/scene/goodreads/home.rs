@@ -12,7 +12,7 @@ use crate::{
 use color_eyre::Result;
 use iced::{
     Task,
-    futures::{SinkExt, Stream},
+    futures::{SinkExt, Stream, StreamExt},
     widget::scrollable,
 };
 
@@ -200,15 +200,19 @@ impl Home {
 }
 
 pub fn fetch_books(books: Vec<BookInfo>) -> impl Stream<Item = (usize, Result<Book, book::Error>)> {
-    iced::stream::channel(1, move |mut output| async move {
-        let number_of_books = books.len();
-        let client = reqwest::Client::new();
-        for (i, BookInfo { title, url }) in books.into_iter().enumerate() {
+    let number_of_books = books.len();
+    let client = reqwest::Client::new();
+    let mut book_requests = vec![];
+    for (i, BookInfo { title, url }) in books.into_iter().enumerate() {
+        // Cloning the client *should* be okay, because it uses an Arc internally. So, new clones should refer to the same client after all
+        let client = client.clone();
+        book_requests.push(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
             println!("Fetching book {}/{}:", i + 1, number_of_books);
             println!("Url: {url}");
-            let book = Book::fetch(url, &client).await;
-            output.send((i, book)).await;
-            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-        }
-    })
+            (i, Book::fetch(url, &client).await)
+        })
+    }
+
+    iced::futures::stream::iter(book_requests).buffered(5)
 }

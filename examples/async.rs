@@ -11,7 +11,8 @@ async fn main() -> Result<()> {
     }
 
     let nows: Vec<_> = iced::futures::stream::iter(futures)
-        .buffer_unordered(5)
+        .buffered(5)
+        // .buffer_unordered(5)
         .collect()
         .await;
 
