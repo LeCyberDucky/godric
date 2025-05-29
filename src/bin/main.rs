@@ -96,11 +96,15 @@ impl Godric {
                     match backend.update(message).await {
                         Ok(message) => {
                             if let Some(message) = message {
-                                ui.send(Ok(message)).await;
+                                ui.send(Ok(message))
+                                    .await
+                                    .expect("Failed to send message to ui");
                             }
                         }
                         Err(error) => {
-                            ui.send(Err(error)).await;
+                            ui.send(Err(error))
+                                .await
+                                .expect("Failed to send message to ui");
                         }
                     }
                 }

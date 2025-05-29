@@ -85,9 +85,11 @@ impl Welcome {
                     })
                 }
                 Message::LoginSuccess { books } => {
-                    state = Some(State::Home(super::home::Home::new(vec![None; books.len()])));
+                    let inner_state = super::home::Home::new(vec![None; books.len()]);
+                    let cache_path = inner_state.cache_path();
+                    state = Some(State::Home(inner_state));
                     task = Task::run(
-                        super::home::fetch_books(books),
+                        super::home::fetch_books(books, cache_path),
                         super::home::Message::BookFetched,
                     );
                 }

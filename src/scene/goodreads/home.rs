@@ -1,3 +1,5 @@
+use std::{path::PathBuf, sync::Arc};
+
 use crate::{
     backend::goodreads::book::BookInfo,
     scene::{
@@ -15,11 +17,25 @@ use iced::{
     futures::{Stream, StreamExt},
     widget::scrollable,
 };
+use tempfile::TempDir;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Home {
     books: Vec<Option<Result<Book, book::Error>>>,
     selected_book: Option<usize>,
+    cache_directory: Arc<TempDir>, // TempDir isn't Clone, so we arc it
+}
+
+impl Default for Home {
+    fn default() -> Self {
+        Self {
+            books: Default::default(),
+            selected_book: Default::default(),
+            cache_directory: TempDir::new()
+                .expect("Failed to create temporary directory to store book covers")
+                .into(),
+        }
+    }
 }
 
 impl From<Home> for State {
@@ -60,6 +76,10 @@ impl Home {
             books,
             ..Default::default()
         }
+    }
+
+    pub fn cache_path(&self) -> PathBuf {
+        self.cache_directory.path().to_path_buf()
     }
 
     pub fn update(
@@ -130,13 +150,13 @@ impl Home {
          * Grid of books *
          *****************/
         let cover_placeholder =
-            iced::widget::image::Handle::from_bytes(book::COVER_PLACEHOLDER_DATA);
+            iced::widget::image::Handle::from_bytes(book::COVER_PLACEHOLDER_THUMBNAIL);
         let covers: Vec<_> = self
             .books
             .iter()
             .map(|book| match book {
                 Some(book) => match book {
-                    Ok(book) => &book.cover,
+                    Ok(book) => &book.thumbnail,
                     Err(error) => &cover_placeholder,
                 },
                 None => &cover_placeholder,
@@ -182,7 +202,7 @@ impl Home {
     fn book_comparison(&self, book: book::Book) -> iced::Element<'_, Message> {
         // let book = book::Book::default();
         let comparison = iced::widget::row![
-            iced::widget::image(book.cover).height(iced::Fill),
+            iced::widget::image(book.thumbnail).height(iced::Fill),
             iced::widget::column![
                 iced::widget::container(iced::widget::text(book.title)).padding(5),
                 iced::widget::container(iced::widget::text(book.author)).padding(5),
@@ -198,18 +218,22 @@ impl Home {
     }
 }
 
-pub fn fetch_books(books: Vec<BookInfo>) -> impl Stream<Item = (usize, Result<Book, book::Error>)> {
+pub fn fetch_books(
+    books: Vec<BookInfo>,
+    image_dir: PathBuf,
+) -> impl Stream<Item = (usize, Result<Book, book::Error>)> {
     let number_of_books = books.len();
     let client = reqwest::Client::new();
     let mut book_requests = vec![];
     for (i, BookInfo { title, url }) in books.into_iter().enumerate() {
         // Cloning the client *should* be okay, because it uses an Arc internally. So, new clones should refer to the same client after all
         let client = client.clone();
+        let image_dir = image_dir.clone();
         book_requests.push(async move {
             tokio::time::sleep(std::time::Duration::from_millis(200)).await;
             println!("Fetching book {}/{}:", i + 1, number_of_books);
             println!("Url: {url}");
-            (i, Book::fetch(url, &client).await)
+            (i, Book::fetch(url, &client, image_dir).await)
         })
     }
 
