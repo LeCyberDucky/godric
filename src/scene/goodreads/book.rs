@@ -1,7 +1,7 @@
 use color_eyre::eyre::{Context, ContextCompat, Result};
 use scraper::{Html, Selector};
 
-pub const COVER_PLACEHOLDER_DATA: &'static [u8] =
+pub const COVER_PLACEHOLDER_DATA: &[u8] =
     include_bytes!(r"..\..\..\Assets\Icons\cover_placeholder.jpg");
 
 #[derive(Clone, Debug, thiserror::Error)]

@@ -56,7 +56,7 @@ impl TryFrom<scene::goodreads::Message> for Message {
             super::Message::Welcome(message) => Ok(message),
             _ => Err(Self::Error::InvalidState {
                 state: "Welcome".into(),
-                message: format!("{:?}", message),
+                message: format!("{message:?}"),
             }),
         }
     }
@@ -105,7 +105,7 @@ impl Welcome {
         )
     }
 
-    pub fn view(&self) -> iced::Element<Message> {
+    pub fn view(&self) -> iced::Element<'_, Message> {
         let image = iced::widget::container(iced::widget::image("Assets/Logo/Welcome.png"))
             .center_x(iced::Length::Fill)
             .center_y(iced::Length::Fill);

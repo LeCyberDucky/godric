@@ -30,7 +30,7 @@ impl TryFrom<crate::scene::Message> for Message {
             super::Message::Launch(message) => Ok(message),
             _ => Err(Error::InvalidState {
                 state: "Launch".into(),
-                message: format!("{:?}", message),
+                message: format!("{message:?}"),
             }),
         }
     }
@@ -132,7 +132,7 @@ impl Launch {
         (state.unwrap_or(self.into()), output, Task::none())
     }
 
-    pub fn view(&self) -> iced::Element<Message> {
+    pub fn view(&self) -> iced::Element<'_, Message> {
         let browser_settings = {
             let server_ip_input = {
                 let title = iced::widget::text("Server ip");

@@ -41,7 +41,7 @@ impl TryFrom<backend::Input> for Input {
             backend::Input::Uninitialized(input) => Ok(input),
             _ => Err(backend::Error::InvalidState {
                 state: "Uninitialized".to_string(),
-                message: format!("{:?}", input),
+                message: format!("{input:?}"),
             }),
         }
     }
@@ -88,7 +88,7 @@ impl Uninitialized {
                 match mode {
                     Mode::Goodreads => Ok((
                         State::Goodreads(backend::goodreads::welcome::Welcome::default().into()),
-                        Some(Output::Initialized(mode.into()).into()),
+                        Some(Output::Initialized(mode)),
                     )),
                     Mode::Steam => todo!(),
                 }

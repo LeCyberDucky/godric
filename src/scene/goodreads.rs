@@ -52,7 +52,7 @@ impl From<State> for crate::scene::State {
 
 impl State {
     pub fn update(
-        mut self,
+        self,
         message: Result<Message, crate::backend::Error>,
     ) -> (
         crate::scene::State,
@@ -71,7 +71,7 @@ impl State {
         )
     }
 
-    pub fn view(&self) -> iced::Element<Message> {
+    pub fn view(&self) -> iced::Element<'_, Message> {
         match self {
             State::Welcome(state) => state.view().map(Message::Welcome),
             State::Home(state) => state.view().map(Message::Home),

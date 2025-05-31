@@ -3,7 +3,7 @@ use color_eyre::{
     Result,
     eyre::{Context, ContextCompat},
 };
-use iced::futures::stream::{FuturesUnordered, StreamExt};
+use iced::futures::stream::StreamExt;
 use scraper::{Html, Selector};
 use thirtyfour as tf;
 
@@ -32,7 +32,7 @@ impl TryFrom<goodreads::Input> for Input {
             super::Input::Home(input) => Ok(input),
             _ => Err(Self::Error::InvalidState {
                 state: "Home".into(),
-                message: format!("{:?}", input),
+                message: format!("{input:?}"),
             }),
         }
     }
@@ -145,15 +145,14 @@ fn parse_bookshelf_page_count(page: &str) -> Result<usize, Error> {
             Some(menu) => {
                 let button_selector = Selector::parse("a").unwrap();
                 let count = menu.select(&button_selector).count();
-                let pages = menu
-                    .select(&button_selector)
+
+                menu.select(&button_selector)
                     .nth(count - 2)
                     .context("Failed to count bookshelf pages")?
                     .inner_html()
                     .trim()
                     .parse()
-                    .context("Failed to parse bookshelf page count")?;
-                pages
+                    .context("Failed to parse bookshelf page count")?
             }
         }
     };

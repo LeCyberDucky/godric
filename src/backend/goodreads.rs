@@ -36,7 +36,7 @@ impl TryFrom<backend::Input> for Input {
             backend::Input::Goodreads(input) => Ok(input),
             _ => Err(Self::Error::InvalidState {
                 state: "Goodreads".into(),
-                message: format!("{:?}", input),
+                message: format!("{input:?}"),
             }),
         }
     }

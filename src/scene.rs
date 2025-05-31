@@ -53,19 +53,15 @@ impl Scene {
         message: Result<Message, Error>,
     ) -> (Option<backend::Input>, Task<crate::Message>) {
         let (state, output, task) = match self.state.clone() {
-            State::Launch(state) => {
-                state.update(message.and_then(|message| launch::Message::try_from(message)))
-            }
-            State::Goodreads(state) => {
-                state.update(message.and_then(|message| goodreads::Message::try_from(message)))
-            }
+            State::Launch(state) => state.update(message.and_then(launch::Message::try_from)),
+            State::Goodreads(state) => state.update(message.and_then(goodreads::Message::try_from)),
         };
 
         self.state = state;
         (output, task.map(|message| message.into()))
     }
 
-    pub fn view(&self) -> Element<Message> {
+    pub fn view(&self) -> Element<'_, Message> {
         match &self.state {
             State::Launch(state) => state.view().map(Message::Launch),
             State::Goodreads(state) => state.view().map(Message::Goodreads),

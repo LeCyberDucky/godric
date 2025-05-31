@@ -131,7 +131,7 @@ async fn sign_in_to_goodreads(
         .context("Unable to find user ID")?
         .context("Unable to find user ID")?
         .split('/')
-        .last()
+        .next_back()
         .context("Unable to parse user ID")?
         .to_owned();
     let user_id = user

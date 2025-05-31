@@ -1,7 +1,7 @@
 use godric::{
     Message,
     backend::{self, Connection},
-    scene::{self, Scene},
+    scene::Scene,
 };
 
 use color_eyre::Result;
@@ -40,12 +40,11 @@ impl Default for Godric {
 impl Godric {
     fn update(&mut self, message: Message) -> Task<Message> {
         // Special treatment for establishing initial backend connection
-        if let Message::Backend(ref message) = message {
-            if let Ok(message) = message {
-                if let backend::Output::Connection(connection) = message {
-                    self.backend = connection.clone();
-                }
-            }
+        if let Message::Backend(ref message) = message
+            && let Ok(message) = message
+            && let backend::Output::Connection(connection) = message
+        {
+            self.backend = connection.clone();
         }
 
         let message = match message {
@@ -61,7 +60,7 @@ impl Godric {
         task
     }
 
-    fn view(&self) -> Element<Message> {
+    fn view(&self) -> Element<'_, Message> {
         let content = self.scene.view().map(Message::Scene);
 
         iced::widget::container(content)

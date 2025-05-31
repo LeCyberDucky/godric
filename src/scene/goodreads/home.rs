@@ -12,7 +12,7 @@ use crate::{
 use color_eyre::Result;
 use iced::{
     Task,
-    futures::{SinkExt, Stream, StreamExt},
+    futures::{Stream, StreamExt},
     widget::scrollable,
 };
 
@@ -48,7 +48,7 @@ impl TryFrom<scene::goodreads::Message> for Message {
             super::Message::Home(message) => Ok(message),
             _ => Err(Self::Error::InvalidState {
                 state: "Home".into(),
-                message: format!("{:?}", message),
+                message: format!("{message:?}"),
             }),
         }
     }
@@ -70,8 +70,8 @@ impl Home {
         Option<crate::backend::goodreads::Input>,
         Task<scene::goodreads::Message>,
     ) {
-        let mut output: Option<crate::backend::goodreads::home::Input> = None;
-        let mut state = None;
+        let output: Option<crate::backend::goodreads::home::Input> = None;
+        let state = None;
 
         match message {
             Ok(message) => match message {
@@ -94,7 +94,7 @@ impl Home {
         )
     }
 
-    pub fn view(&self) -> iced::Element<Message> {
+    pub fn view(&self) -> iced::Element<'_, Message> {
         /*******************
          * Book comparison *
          *******************/
@@ -156,16 +156,17 @@ impl Home {
 
         let grid_height = 3;
         let grid_spacing = 0;
-        let book_grid = scrollable(
+
+        scrollable(
             iced::widget::row({
                 let mut columns = vec![];
                 while grid_height <= covers.len() {
                     columns.push(covers.drain(..grid_height).collect::<Vec<_>>());
                 }
-                columns.push(covers.drain(..).collect::<Vec<_>>());
+                columns.push(std::mem::take(&mut covers));
 
                 columns.into_iter().map(|covers| {
-                    iced::widget::column(covers.into_iter().map(|cover| iced::Element::new(cover)))
+                    iced::widget::column(covers.into_iter().map(iced::Element::new))
                         .spacing(grid_spacing)
                         .into()
                 })
@@ -175,12 +176,10 @@ impl Home {
         .direction(scrollable::Direction::Horizontal(
             scrollable::Scrollbar::new(),
         ))
-        .into();
-
-        book_grid
+        .into()
     }
 
-    fn book_comparison(&self, book: book::Book) -> iced::Element<Message> {
+    fn book_comparison(&self, book: book::Book) -> iced::Element<'_, Message> {
         // let book = book::Book::default();
         let comparison = iced::widget::row![
             iced::widget::image(book.cover).height(iced::Fill),
