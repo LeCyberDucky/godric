@@ -1,12 +1,12 @@
 use std::path::PathBuf;
 
 use color_eyre::eyre::{Context, ContextCompat, Result};
-use image::EncodableLayout;
+use image::GenericImage;
 use scraper::{Html, Selector};
 
 const COVER_PLACEHOLDER_PATH: &str = r"..\..\..\Assets\Icons\cover_placeholder.jpg";
 pub const COVER_PLACEHOLDER_THUMBNAIL: &[u8] =
-    include_bytes!(r"..\..\..\Assets\Icons\cover_placeholder_thumbnail.jpg");
+    include_bytes!(r"..\..\..\Assets\Icons\cover_placeholder_thumbnail.png");
 
 #[derive(Clone, Debug, thiserror::Error)]
 pub enum Error {
@@ -134,10 +134,8 @@ async fn cache_book_cover(
     source: url::Url,
     cache_directory: PathBuf,
     client: &reqwest::Client,
-) -> Result<(image::RgbaImage, PathBuf), Error> {
+) -> Result<(image::DynamicImage, PathBuf), Error> {
     // Store full cover image to file
-    // Hash URL to create file name
-
     // Create thumbnail to keep in memory
 
     let cover_data = client
@@ -149,28 +147,50 @@ async fn cache_book_cover(
         .await
         .context("Failed to download cover image")?;
 
-    // let cache_directory = cache_directory.as_ref();
     tokio::task::spawn_blocking(move || {
         let cover = image::load_from_memory(&cover_data)
             .context("Failed to interpret downloaded bytes as cover image")?;
 
-        let image_format_extension = image::guess_format(&cover_data)
-            .context("Failed to detect format of downloaded cover image")?
-            .extensions_str()
-            .first()
-            .context("No known file extension for detected image format")?;
-
         let filepath = cache_directory
             .join(uuid::Uuid::new_v4().to_string())
-            .with_extension(image_format_extension);
+            .with_extension(".png");
 
+        // We drop the alpha channel to make things easier for ourselves - To cite Kasper: Why should a book cover have an alpha channel?
         cover
+            .to_rgb8()
             .save(&filepath)
             .context("Failed to cache cover image")?;
 
-        let thumbnail = cover.thumbnail(84, 126).into_rgba8(); // 6x9 is a common aspect ratio for fiction books. See: https://blog.reedsy.com/guide/book-design/book-cover-dimensions/
+        let thumbnail = create_thumbnail(&cover, 84, 126)?; // 6x9 is a common aspect ratio for fiction books. See: https://blog.reedsy.com/guide/book-design/book-cover-dimensions/
         Ok((thumbnail, filepath))
     })
     .await
     .context("Failed to process cover image")?
+}
+
+pub fn create_thumbnail(
+    image: &image::DynamicImage,
+    width: u32,
+    height: u32,
+) -> Result<image::DynamicImage> {
+    let pad_colour = okolors::Okolors::try_from(&image.to_rgb8())?
+        .parallel(true)
+        .sort_by_frequency(true)
+        .srgb_palette()
+        .into_iter()
+        .rev()
+        .next()
+        .context("Failed to compute palette for image")?
+        .into_format();
+
+    let thumbnail = image.thumbnail(width, height);
+    let x_offset = (width - thumbnail.width()) / 2;
+    let y_offset = (height - thumbnail.height()) / 2;
+    let mut padded_thumbnail = image::RgbaImage::from_pixel(
+        width,
+        height,
+        image::Rgba::from([pad_colour.red, pad_colour.green, pad_colour.blue, 255]),
+    );
+    padded_thumbnail.copy_from(&thumbnail, x_offset, y_offset)?;
+    Ok(padded_thumbnail.into())
 }

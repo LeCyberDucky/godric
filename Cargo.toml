@@ -11,6 +11,7 @@ color-eyre = "0.6.3"
 dotenv = "0.15.0"
 iced = { version = "0.13", features = ["tokio", "image", "canvas"] }
 image = "0.25.6"
+okolors = "0.8.1"
 rand = "0.8.5"
 reqwest = { version = "0.12.10", features = ["cookies", "blocking"] }
 scraper = "0.20.0"
