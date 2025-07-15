@@ -1,5 +1,5 @@
 use crate::{
-    common::helpers::Credentials,
+    common::{cache, helpers::Credentials},
     scene::{self, goodreads::State},
 };
 
@@ -9,6 +9,7 @@ use iced::Task;
 #[derive(Clone, Debug)]
 pub struct Welcome {
     credentials: Credentials,
+    cache: cache::Config,
 }
 
 impl Default for Welcome {
@@ -18,6 +19,7 @@ impl Default for Welcome {
                 email: std::env::var("godric_email").unwrap_or("".to_string()),
                 password: std::env::var("godric_password").unwrap_or("".to_string()),
             },
+            cache: cache::Config::default(),
         }
     }
 }

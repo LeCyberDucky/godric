@@ -3,9 +3,8 @@ use strum::IntoEnumIterator;
 
 use crate::{
     backend,
-    common::{browser, helpers::Mode},
-    scene::Error,
-    scene::State,
+    common::{browser, cache, helpers::Mode},
+    scene::{Error, State},
 };
 
 #[derive(Clone, Debug)]
@@ -19,6 +18,8 @@ pub enum Message {
     BrowserHeadlessToggle(bool),
     ModeSelected(crate::common::helpers::Mode),
     BackendConnected,
+    CacheEnableToggle(bool),
+    CachePathInput(String),
 }
 
 impl TryFrom<crate::scene::Message> for Message {
@@ -56,6 +57,7 @@ pub struct Launch {
     browser_driver_port_input: String,
     browser_headless: bool,
     browser: browser::Browser,
+    cache: cache::Config,
     mode: Mode,
 }
 
@@ -78,6 +80,7 @@ impl Default for Launch {
                 .and_then(|string| string.parse().ok())
                 .unwrap_or(true),
             browser: browser::Browser::Firefox,
+            cache: cache::Config::default(),
             mode: Mode::Goodreads,
         }
     }
@@ -119,7 +122,6 @@ impl Launch {
                     State::Goodreads(crate::scene::goodreads::welcome::Welcome::default().into())
                         .into()
             }
-
             Message::ServerAddressInput(address) => self.browser_driver_ip_input = address,
             Message::ServerPortInput(port) => self.browser_driver_port_input = port,
             Message::SettingsClick => todo!(),
@@ -127,6 +129,8 @@ impl Launch {
             Message::BrowserHeadlessToggle(headless) => self.browser_headless = headless,
             Message::ModeSelected(mode) => self.mode = mode,
             Message::BackendConnected => println!("Backend connected!"),
+            Message::CacheEnableToggle(enabled) => self.cache.enabled = enabled,
+            Message::CachePathInput(path) => self.cache.path = path.into(),
         };
 
         (state.unwrap_or(self.into()), output, Task::none())
@@ -180,6 +184,28 @@ impl Launch {
                 .padding(10)
         };
 
+        let cache_settings = {
+            let cache_toggle = iced::widget::container(
+                iced::widget::checkbox("Enable cache", self.cache.enabled)
+                    .on_toggle(Message::CacheEnableToggle),
+            );
+
+
+            let cache_path = {
+                let title = iced::widget::text("Cache location");
+                let input =
+                    iced::widget::TextInput::new("./Cache", &self.cache.path.to_string_lossy())
+                        .on_input(Message::CachePathInput)
+                        .padding(10);
+                iced::widget::column!(title, input)
+            };
+
+            iced::widget::row!(cache_path, cache_toggle)
+                .align_y(iced::Alignment::End)
+                .spacing(10)
+                .padding(10)
+        };
+
         let image = iced::widget::container(iced::widget::image("Assets/Logo/Welcome.png"))
             .center_x(iced::Length::Fill)
             .center_y(iced::Length::Fill);
@@ -208,7 +234,7 @@ impl Launch {
             .padding(10)
             .align_x(iced::Alignment::Center);
 
-        let content = iced::widget::column!(browser_settings, image, launch_prompt)
+        let content = iced::widget::column!(browser_settings, cache_settings, image, launch_prompt)
             .width(iced::Length::Fill)
             .height(iced::Length::Fill);
 
