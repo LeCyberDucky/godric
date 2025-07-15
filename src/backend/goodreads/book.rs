@@ -7,7 +7,7 @@ use tempfile::TempDir;
 
 use crate::common::cache;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct BookInfo {
     pub title: String,
     pub url: url::Url,

@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use crate::{
     backend::goodreads::{self, State},
     common::helpers::Credentials,
@@ -75,10 +77,18 @@ impl Welcome {
     ) -> Result<(State, Option<goodreads::Output>), Error> {
         match input {
             Input::LoginAttempt { credentials } => {
-                let user_id = sign_in_to_goodreads(browser, &credentials).await?;
-                let books = super::home::fetch_booklist(&user_id)
-                    .await
-                    .context("Failed to switch to Home state")?;
+                let (user_id, books) = if cfg!(feature = "mock_backend") {
+                    load_booklist_from_file()
+                } else {
+                    let user_id = sign_in_to_goodreads(browser, &credentials).await?;
+                    let books = super::home::fetch_booklist(&user_id)
+                        .await
+                        .context("Failed to switch to Home state")?;
+
+                    store_booklist(&books);
+
+                    (user_id, books)
+                };
 
                 let state = Home::new(user_id, books.clone(), cache)?;
                 Ok((state.into(), Some(Output::LoginSuccess { books }.into())))
@@ -86,6 +96,29 @@ impl Welcome {
             Input::Tick => Ok((self.into(), None)),
         }
     }
+}
+
+fn load_booklist_from_file() -> (String, Vec<goodreads::book::BookInfo>) {
+    println!("Mocking backend and loading booklist from file!");
+    let user_id = "176878294".to_string();
+    let book_file =
+        std::fs::File::open("./Data/booklist.ron").expect("Failed to open mock booklist file");
+    let reader = std::io::BufReader::new(&book_file);
+    let books = ron::de::from_reader(reader).expect("Failed to deserialize mock booklist");
+    (user_id, books)
+}
+
+fn store_booklist(books: &Vec<goodreads::book::BookInfo>) {
+    // For development purposes, we can store the booklist to file, so we don't have to fetch it all the time
+    let output_file = std::fs::File::create("./Data/booklist.ron")
+        .expect("Failed to create booklist output file");
+    let mut writer = std::io::BufWriter::new(output_file);
+    ron::Options::default().to_io_writer_pretty(
+        &mut writer,
+        books,
+        ron::ser::PrettyConfig::default(),
+    );
+    writer.flush().expect("Failed to flush booklist file");
 }
 
 /// Signs in to goodreads.com, returning the user ID-string
