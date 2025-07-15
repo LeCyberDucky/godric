@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use color_eyre::eyre::{Context, ContextCompat, Result};
 use image::GenericImage;
 use scraper::{Html, Selector};
+use serde::{Deserialize, Serialize};
 
 const COVER_PLACEHOLDER_PATH: &str = r"..\..\..\Assets\Icons\cover_placeholder.jpg";
 pub const COVER_PLACEHOLDER_THUMBNAIL: &[u8] =
@@ -10,6 +11,8 @@ pub const COVER_PLACEHOLDER_THUMBNAIL: &[u8] =
 
 #[derive(Clone, Debug, thiserror::Error)]
 pub enum Error {
+    #[error("{0}")]
+    Image(String),
     #[error("{0}")]
     Other(String),
 }
@@ -54,6 +57,10 @@ impl Default for Book {
 }
 
 impl Book {
+    // 6x9 is a common aspect ratio for fiction books. See: https://blog.reedsy.com/guide/book-design/book-cover-dimensions/
+    pub const THUMBNAIL_WIDTH: u32 = 84;
+    pub const THUMBNAIL_HEIGHT: u32 = 126;
+
     pub async fn fetch(
         url: url::Url,
         client: &reqwest::Client,
@@ -123,6 +130,34 @@ impl Book {
             cover_cache,
         })
     }
+
+    /// Turns the book into a StorableBook suitable for serialization. This involves moving the cached cover from the temporary directory to a permanent directory
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if .
+    fn to_storeable_book(
+        self,
+        cover_directory: impl AsRef<std::path::Path>,
+    ) -> Result<StoreableBook> {
+        // Move cover image from cache to permanent storage
+        let cover_path = self
+            .cover_cache
+            .file_name()
+            .context(format!("Invalid cover path: {:?}", self.cover_cache))?;
+        let cover_path = cover_directory.as_ref().join(cover_path);
+        if (self.cover_cache.canonicalize()? != cover_path.canonicalize()?) {
+            std::fs::copy(self.cover_cache, &cover_path)?;
+        }
+
+        Ok(StoreableBook {
+            url: self.url,
+            title: self.title,
+            author: self.author,
+            blurb: self.blurb,
+            cover: cover_path,
+        })
+    }
 }
 
 /// Downloads a book cover image from a given source, stores it to the given cache directory, and creates a thumbnail version of the image.
@@ -161,7 +196,7 @@ async fn cache_book_cover(
             .save(&filepath)
             .context("Failed to cache cover image")?;
 
-        let thumbnail = create_thumbnail(&cover, 84, 126)?; // 6x9 is a common aspect ratio for fiction books. See: https://blog.reedsy.com/guide/book-design/book-cover-dimensions/
+        let thumbnail = create_thumbnail(&cover, Book::THUMBNAIL_WIDTH, Book::THUMBNAIL_HEIGHT)?;
         Ok((thumbnail, filepath))
     })
     .await
@@ -193,4 +228,38 @@ pub fn create_thumbnail(
     );
     padded_thumbnail.copy_from(&thumbnail, x_offset, y_offset)?;
     Ok(padded_thumbnail.into())
+}
+
+// (De-)serializing a book is a hassle, because the cover image should be stored to and loaded from a separate location
+// Instead, we create a helper type that can be obtained from a Book. We take care of storing/loading images during the conversion between the two types.
+// Hence, we can just go like this: Book --> StoreableBook --> serialize --> json --> deserialize --> StoreableBook --> Book
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub struct StoreableBook {
+    pub url: url::Url,
+    pub title: String,
+    pub author: String,
+    pub blurb: String,
+    pub cover: PathBuf,
+}
+
+impl TryFrom<StoreableBook> for Book {
+    type Error = Error;
+
+    fn try_from(value: StoreableBook) -> std::result::Result<Self, Self::Error> {
+        let cover = &image::open(&value.cover).map_err(|error| Error::Image(error.to_string()))?;
+        let thumbnail = create_thumbnail(cover, Book::THUMBNAIL_WIDTH, Book::THUMBNAIL_HEIGHT)?;
+        let thumbnail = iced::widget::image::Handle::from_rgba(
+            thumbnail.width(),
+            thumbnail.height(),
+            thumbnail.as_bytes().to_owned(),
+        );
+        Ok(Self {
+            url: value.url,
+            title: value.title,
+            author: value.author,
+            blurb: value.blurb,
+            cover_cache: value.cover,
+            thumbnail,
+        })
+    }
 }
