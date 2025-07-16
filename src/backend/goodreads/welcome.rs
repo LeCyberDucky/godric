@@ -64,7 +64,7 @@ impl Welcome {
     ) -> Result<(State, Option<goodreads::Output>), Error> {
         let Input::LoginAttempt { credentials } = input;
         let user_id = sign_in_to_goodreads(browser, &credentials).await?;
-        let books = super::home::fetch_books(&user_id)
+        let books = super::home::fetch_booklist(&user_id)
             .await
             .context("Failed to switch to Home state")?;
 

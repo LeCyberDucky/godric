@@ -67,7 +67,7 @@ impl Home {
     }
 }
 
-pub async fn fetch_books(user_id: &str) -> Result<Vec<BookInfo>, Error> {
+pub async fn fetch_booklist(user_id: &str) -> Result<Vec<BookInfo>, Error> {
     let bookshelf_link = url::Url::parse(&format!(
         "https://www.goodreads.com/review/list/{user_id}?shelf=to-read"
     ))
