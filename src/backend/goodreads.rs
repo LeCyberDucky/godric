@@ -47,6 +47,7 @@ impl TryFrom<backend::Input> for Input {
 #[derive(Clone, Debug)]
 pub enum Output {
     Welcome(welcome::Output),
+    Home(home::Output),
 }
 
 impl From<Output> for backend::Output {

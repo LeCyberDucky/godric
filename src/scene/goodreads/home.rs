@@ -46,13 +46,23 @@ impl From<Home> for State {
 
 #[derive(Clone, Debug)]
 pub enum Message {
-    BookFetched((usize, Result<Book, book::Error>)),
+    BookFetched(
+        Result<crate::backend::goodreads::book::Book, crate::backend::goodreads::book::Error>,
+    ),
     BookSelected(usize),
 }
 
 impl From<Message> for scene::goodreads::Message {
     fn from(message: Message) -> Self {
         Self::Home(message)
+    }
+}
+
+impl From<crate::backend::goodreads::home::Output> for Message {
+    fn from(output: crate::backend::goodreads::home::Output) -> Self {
+        match output {
+            crate::backend::goodreads::home::Output::Book(book) => Self::BookFetched(book),
+        }
     }
 }
 
@@ -95,13 +105,19 @@ impl Home {
 
         match message {
             Ok(message) => match message {
-                Message::BookFetched((i, book)) => {
+                Message::BookFetched(book) => {
                     if let Err(ref error) = book {
                         todo!("{error}")
                     }
-
-                    self.books[i] = Some(book);
+                    todo!("Display fetched book!");
                 }
+                // Message::BookFetched((i, book)) => {
+                //     if let Err(ref error) = book {
+                //         todo!("{error}")
+                //     }
+
+                //     self.books[i] = Some(book);
+                // }
                 Message::BookSelected(selection) => self.selected_book = Some(selection),
             },
             Err(error) => todo!(),
@@ -204,11 +220,11 @@ impl Home {
         let comparison = iced::widget::row![
             iced::widget::image(book.thumbnail).height(iced::Fill),
             iced::widget::column![
-                iced::widget::container(iced::widget::text(book.title)).padding(5),
-                iced::widget::container(iced::widget::text(book.author)).padding(5),
+                iced::widget::container(iced::widget::text(book.info.title)).padding(5),
+                iced::widget::container(iced::widget::text(book.info.author)).padding(5),
                 iced::widget::horizontal_rule(2),
                 iced::widget::scrollable(
-                    iced::widget::container(iced::widget::text(book.blurb)).padding(5)
+                    iced::widget::container(iced::widget::text(book.info.blurb)).padding(5)
                 )
                 .direction(scrollable::Direction::Vertical(scrollable::Scrollbar::new())) // .spacing(5)
             ]

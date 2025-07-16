@@ -21,6 +21,7 @@ impl From<crate::backend::goodreads::Output> for Message {
     fn from(output: crate::backend::goodreads::Output) -> Self {
         match output {
             crate::backend::goodreads::Output::Welcome(output) => Self::Welcome(output.into()),
+            crate::backend::goodreads::Output::Home(output) => Self::Home(output.into()),
         }
     }
 }

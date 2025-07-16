@@ -1,10 +1,14 @@
-use crate::backend::goodreads::{self, State, book::BookInfo};
+use crate::backend::goodreads::{
+    self, State,
+    book::{BookInfo, BookList},
+};
 use color_eyre::{
     Result,
     eyre::{Context, ContextCompat},
 };
 use iced::futures::stream::StreamExt;
 use scraper::{Html, Selector};
+use tempfile::TempDir;
 use thirtyfour as tf;
 
 #[derive(thiserror::Error, Debug)]
@@ -42,12 +46,20 @@ impl TryFrom<goodreads::Input> for Input {
 }
 
 #[derive(Clone, Debug)]
-pub enum Output {}
+pub enum Output {
+    Book(Result<goodreads::book::Book, goodreads::book::Error>),
+}
+
+impl From<Output> for goodreads::Output {
+    fn from(output: Output) -> Self {
+        Self::Home(output)
+    }
+}
 
 #[derive(Debug)]
 pub struct Home {
     user_id: String,
-    books: Vec<BookInfo>,
+    books: BookList,
 }
 
 impl From<Home> for State {
@@ -58,15 +70,35 @@ impl From<Home> for State {
 
 impl Home {
     pub fn new(user_id: String, books: Vec<BookInfo>) -> Self {
+        let books: Vec<_> = books.into_iter().map(|info| info.url).collect();
+        let books = BookList::new(
+            books,
+            reqwest::Client::new(),
+            TempDir::new()
+                .expect("Failed to create temporary directory to store book covers")
+                .into(),
+        );
         Self { user_id, books }
     }
 
     pub async fn update(
-        self,
+        mut self,
         _browser: &mut tf::WebDriver,
         input: Input,
     ) -> Result<(State, Option<goodreads::Output>), Error> {
-        Ok((self.into(), None))
+        // Book downloading struct that implements stream
+        // This means that we can call next on the thing to get a single new book
+        // Then we can transition --> send the book as output, and take the struct with us into the next state
+
+        // let output = None;
+        // if let Some(book) = self.books.queue.next().await {
+        //     output =
+        //     println!("Downloaded book: {}!", book.unwrap().title);
+        // }
+
+        let output = self.books.queue.next().await.map(Output::Book);
+
+        Ok((self.into(), output.map(|output| output.into())))
     }
 }
 
