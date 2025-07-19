@@ -41,7 +41,7 @@ impl TryFrom<goodreads::Input> for Input {
 #[derive(Clone, Debug)]
 pub enum Output {}
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Home {
     user_id: String,
     books: Vec<BookInfo>,

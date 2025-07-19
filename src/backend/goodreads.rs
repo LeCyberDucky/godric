@@ -53,7 +53,7 @@ impl From<Output> for backend::Output {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum State {
     Welcome(welcome::Welcome),
     Home(home::Home),

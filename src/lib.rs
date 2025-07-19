@@ -1,5 +1,6 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
+#![feature(if_let_guard)]
 pub mod backend;
 pub mod common;
 pub mod scene;

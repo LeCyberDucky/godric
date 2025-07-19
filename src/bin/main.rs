@@ -76,7 +76,6 @@ impl Godric {
     fn backend_subscription(&self) -> Subscription<Message> {
         Subscription::run(|| {
             iced::stream::channel(0, |mut ui| async move {
-                // Executed only once, even on repeated calls of subscription
                 let (sender, mut receiver) = mpsc::channel(50);
                 let mut backend = crate::backend::Backend::default();
 
@@ -86,14 +85,15 @@ impl Godric {
                 .await
                 .expect("Unable to connect to GUI!");
 
-                // Executed continuously, kept alive across calls
                 loop {
                     let message = receiver
                         .recv()
                         .await
                         .expect("Input connection from GUI closed!");
 
-                    match backend.update(message).await {
+                    let (state, output) = backend.update(message).await;
+                    backend = state;
+                    match output {
                         Ok(message) => {
                             if let Some(message) = message {
                                 ui.send(Ok(message))

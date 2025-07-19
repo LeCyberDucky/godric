@@ -52,10 +52,11 @@ pub enum Output {
     Uninitialized(uninitialized::Output),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum State {
     Uninitialized(Uninitialized),
     Goodreads(goodreads::State),
+    Error,
 }
 
 impl Default for State {
@@ -71,42 +72,49 @@ pub struct Backend {
 }
 
 impl Backend {
-    pub async fn update(&mut self, input: Input) -> Result<Option<Output>, Error> {
-        dbg!(self.state.clone());
-        dbg!(self.browser_connection.is_some());
-        dbg!(input.clone());
+    pub async fn update(mut self, input: Input) -> (Self, Result<Option<Output>, Error>) {
+        let state_description = format!("{:?}", self.state);
+        let input_description = format!("{input:?}");
+        let outcome: Result<(State, Option<Output>), Error> = match self.state {
+            State::Uninitialized(state) if let Input::Uninitialized(input) = input => state
+                .update(&mut self.browser_connection, input)
+                .await
+                .map_err(|error| error.into()),
 
-        if let State::Uninitialized(state) = self.state.clone()
-            && let Input::Uninitialized(input) = input
-        {
-            let (state, output) = state.update(&mut self.browser_connection, input).await?;
-            self.state = state;
-            return Ok(output);
-        };
+            State::Goodreads(state) if let Ok(input) = input.try_into() => {
+                let connection = self
+                    .browser_connection
+                    .as_mut()
+                    .context("Browser disconnected!");
 
-        let connection = self
-            .browser_connection
-            .as_mut()
-            .context("Browser disconnected!")
-            .map_err(|error| uninitialized::Error::BrowserConnection(error.to_string()))?;
-
-        let (state, output) = match self.state.clone() {
-            State::Goodreads(state) => {
-                let (state, output) = state
-                    .update(&mut connection.browser, input.try_into()?)
-                    .await?;
-                (state, Ok(output))
+                match connection {
+                    Ok(connection) => state
+                        .update(&mut connection.browser, input)
+                        .await
+                        .map_err(|error| error.into()),
+                    Err(error) => {
+                        Err(uninitialized::Error::BrowserConnection(error.to_string()).into())
+                    }
+                }
             }
-            _ => (
-                self.state.clone(),
-                Err(Error::InvalidState {
-                    state: format!("{:?}", self.state),
-                    message: format!("{input:?}"),
-                }),
-            ),
+            _ => Err(Error::InvalidState {
+                state: state_description,
+                message: input_description,
+            }),
         };
 
-        self.state = state;
-        output
+        // If a state update fails, we cannot just pretend that nothing happened and return to the initial state
+        // Rust enforces this, because the update functions consume the state, so there is nothing to return to. Therefore, we enter an error state instead
+        // Now, the question is: Should all problems in the update functions lead directly to the error state? Probably not. Perhaps the update functions should return
+        // Result<(State, Result<Option<backend::Output>, Error>), Error>
+        // instead of
+        // Result<(backend::State, Option<backend::Output>), Error>
+        if let Ok((state, output)) = outcome {
+            self.state = state;
+            (self, Ok(output))
+        } else {
+            self.state = State::Error;
+            (self, outcome.map(|(state, output)| output))
+        }
     }
 }
