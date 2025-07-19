@@ -146,7 +146,7 @@ impl Book {
             .file_name()
             .context(format!("Invalid cover path: {:?}", self.cover_cache))?;
         let cover_path = cover_directory.as_ref().join(cover_path);
-        if (self.cover_cache.canonicalize()? != cover_path.canonicalize()?) {
+        if self.cover_cache.canonicalize()? != cover_path.canonicalize()? {
             std::fs::copy(self.cover_cache, &cover_path)?;
         }
 

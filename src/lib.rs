@@ -1,4 +1,5 @@
-#![feature(let_chains)]
+#![allow(unused_variables)]
+#![allow(dead_code)]
 pub mod backend;
 pub mod common;
 pub mod scene;
