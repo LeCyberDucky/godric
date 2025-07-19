@@ -72,7 +72,7 @@ impl Uninitialized {
         self,
         connection: &mut Option<browser::Connection>,
         input: Input,
-    ) -> Result<(State, Option<Output>), Error> {
+    ) -> Result<(State, Option<backend::Output>), Error> {
         match input {
             Input::Launch {
                 browser_driver_config,
@@ -88,7 +88,7 @@ impl Uninitialized {
                 match mode {
                     Mode::Goodreads => Ok((
                         State::Goodreads(backend::goodreads::welcome::Welcome::default().into()),
-                        Some(Output::Initialized(mode)),
+                        Some(Output::Initialized(mode).into()),
                     )),
                     Mode::Steam => todo!(),
                 }

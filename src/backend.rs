@@ -81,7 +81,7 @@ impl Backend {
         {
             let (state, output) = state.update(&mut self.browser_connection, input).await?;
             self.state = state;
-            return Ok(output.map(|output| output.into()));
+            return Ok(output);
         };
 
         let connection = self
