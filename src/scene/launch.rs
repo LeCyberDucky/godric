@@ -96,7 +96,7 @@ impl Launch {
     ) -> (State, Option<backend::Input>, Task<crate::scene::Message>) {
         let mut output = None;
         let mut state = None;
-        match message.expect("Failed to launch.") {
+        match message.expect("Failed to launch") {
             Message::LaunchAttempt => {
                 if let Ok(ip) = self.browser_driver_ip_input.parse()
                     && let Ok(port) = self.browser_driver_port_input.parse()
