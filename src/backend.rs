@@ -29,12 +29,23 @@ pub enum Connection {
 }
 
 impl Connection {
+    pub const CAPACITY: usize = 50;
+
     pub fn send(&mut self, input: Input) -> Result<(), Error> {
         match self {
             Connection::Disconnected => todo!(),
-            Connection::Connected(connection) => connection
-                .try_send(input)
-                .map_err(|error| Error::UiDisconnected(error.to_string())),
+            Connection::Connected(connection) => {
+                if let Input::Tick = input
+                    && connection.capacity() < connection.max_capacity()
+                {
+                    // There are other messages queued up already, so we don't need to send a tick
+                    return Ok(());
+                }
+
+                connection
+                    .try_send(input)
+                    .map_err(|error| Error::UiDisconnected(error.to_string()))
+            }
         }
     }
 }
@@ -43,6 +54,7 @@ impl Connection {
 pub enum Input {
     Uninitialized(uninitialized::Input),
     Goodreads(goodreads::Input),
+    Tick,
 }
 
 #[derive(Debug, Clone)]
@@ -76,12 +88,12 @@ impl Backend {
         let state_description = format!("{:?}", self.state);
         let input_description = format!("{input:?}");
         let outcome: Result<(State, Option<Output>), Error> = match self.state {
-            State::Uninitialized(state) if let Input::Uninitialized(input) = input => state
+            State::Uninitialized(state) if let Ok(input) = input.clone().try_into() => state
                 .update(&mut self.browser_connection, input)
                 .await
                 .map_err(|error| error.into()),
 
-            State::Goodreads(state) if let Ok(input) = input.try_into() => {
+            State::Goodreads(state) if let Ok(input) = input.clone().try_into() => {
                 let connection = self
                     .browser_connection
                     .as_mut()

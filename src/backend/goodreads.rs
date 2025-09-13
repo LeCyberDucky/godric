@@ -20,6 +20,7 @@ pub enum Error {
 pub enum Input {
     Welcome(welcome::Input),
     Home(home::Input),
+    Tick,
 }
 
 impl From<Input> for backend::Input {
@@ -34,6 +35,7 @@ impl TryFrom<backend::Input> for Input {
     fn try_from(input: backend::Input) -> Result<Self, Self::Error> {
         match input {
             backend::Input::Goodreads(input) => Ok(input),
+            backend::Input::Tick => Ok(Self::Tick),
             _ => Err(Self::Error::InvalidState {
                 state: "Goodreads".into(),
                 message: format!("{input:?}"),

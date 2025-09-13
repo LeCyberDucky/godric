@@ -9,4 +9,5 @@ pub mod scene;
 pub enum Message {
     Backend(Result<backend::Output, backend::Error>),
     Scene(scene::Message),
+    Tick,
 }

@@ -18,6 +18,7 @@ pub enum Error {
 #[derive(Clone, Debug)]
 pub enum Input {
     LoginAttempt { credentials: Credentials },
+    Tick,
 }
 
 impl From<Input> for goodreads::Input {
@@ -32,6 +33,11 @@ impl TryFrom<goodreads::Input> for Input {
     fn try_from(input: goodreads::Input) -> Result<Self, Self::Error> {
         match input {
             super::Input::Welcome(input) => Ok(input),
+            super::Input::Tick => Ok(Self::Tick),
+            _ => Err(Self::Error::InvalidState {
+                state: "Goodreads".into(),
+                message: format!("{input:?}"),
+            }),
         }
     }
 }
@@ -62,14 +68,18 @@ impl Welcome {
         browser: &mut tf::WebDriver,
         input: Input,
     ) -> Result<(State, Option<goodreads::Output>), Error> {
-        let Input::LoginAttempt { credentials } = input;
-        let user_id = sign_in_to_goodreads(browser, &credentials).await?;
-        let books = super::home::fetch_booklist(&user_id)
-            .await
-            .context("Failed to switch to Home state")?;
+        match input {
+            Input::LoginAttempt { credentials } => {
+                let user_id = sign_in_to_goodreads(browser, &credentials).await?;
+                let books = super::home::fetch_booklist(&user_id)
+                    .await
+                    .context("Failed to switch to Home state")?;
 
-        let state = Home::new(user_id, books.clone());
-        Ok((state.into(), Some(Output::LoginSuccess { books }.into())))
+                let state = Home::new(user_id, books.clone());
+                Ok((state.into(), Some(Output::LoginSuccess { books }.into())))
+            }
+            Input::Tick => Ok((self.into(), None)),
+        }
     }
 }
 

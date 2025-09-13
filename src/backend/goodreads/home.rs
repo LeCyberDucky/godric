@@ -16,7 +16,9 @@ pub enum Error {
 }
 
 #[derive(Clone, Debug)]
-pub enum Input {}
+pub enum Input {
+    Tick,
+}
 
 impl From<Input> for goodreads::Input {
     fn from(input: Input) -> Self {
@@ -30,6 +32,7 @@ impl TryFrom<goodreads::Input> for Input {
     fn try_from(input: goodreads::Input) -> Result<Self, Self::Error> {
         match input {
             super::Input::Home(input) => Ok(input),
+            super::Input::Tick => Ok(Self::Tick),
             _ => Err(Self::Error::InvalidState {
                 state: "Home".into(),
                 message: format!("{input:?}"),

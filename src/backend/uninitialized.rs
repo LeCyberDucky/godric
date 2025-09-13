@@ -25,6 +25,7 @@ pub enum Input {
         browser_driver_config: browser::DriverConfig,
         mode: Mode,
     },
+    Tick,
 }
 
 impl From<Input> for backend::Input {
@@ -39,6 +40,7 @@ impl TryFrom<backend::Input> for Input {
     fn try_from(input: backend::Input) -> Result<Self, Self::Error> {
         match input {
             backend::Input::Uninitialized(input) => Ok(input),
+            backend::Input::Tick => Ok(Self::Tick),
             _ => Err(backend::Error::InvalidState {
                 state: "Uninitialized".to_string(),
                 message: format!("{input:?}"),
@@ -93,6 +95,7 @@ impl Uninitialized {
                     Mode::Steam => todo!(),
                 }
             }
+            Input::Tick => Ok((self.into(), None)),
         }
     }
 }

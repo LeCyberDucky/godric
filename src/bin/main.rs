@@ -14,7 +14,9 @@ pub fn main() -> Result<()> {
     dotenv::dotenv()?;
     Ok(iced::application("Godric", Godric::update, Godric::view)
         .theme(Godric::theme)
-        .subscription(Godric::backend_subscription)
+        .subscription(|x| {
+            iced::Subscription::batch(vec![Godric::backend_subscription(x), Godric::tick(x)])
+        })
         .window(iced::window::Settings {
             icon: iced::window::icon::from_file("Assets/Logo/Icon - zoomed.jpg").ok(),
             ..Default::default()
@@ -48,12 +50,12 @@ impl Godric {
             self.backend = connection.clone();
         }
 
-        let message = match message {
-            Message::Scene(message) => Ok(message),
-            Message::Backend(output) => output.map(|output| output.into()),
+        let (input, task) = match message {
+            Message::Scene(message) => self.scene.update(Ok(message)),
+            Message::Backend(output) => self.scene.update(output.map(|output| output.into())),
+            Message::Tick => (Some(backend::Input::Tick), Task::none()),
         };
 
-        let (input, task) = self.scene.update(message);
         if let Some(input) = input {
             self.backend.send(input);
         }
@@ -77,7 +79,7 @@ impl Godric {
     fn backend_subscription(&self) -> Subscription<Message> {
         Subscription::run(|| {
             iced::stream::channel(0, |mut ui| async move {
-                let (sender, mut receiver) = mpsc::channel(50);
+                let (sender, mut receiver) = mpsc::channel(crate::backend::Connection::CAPACITY);
                 let mut backend = crate::backend::Backend::default();
 
                 ui.send(Ok(crate::backend::Output::Connection(
@@ -112,5 +114,8 @@ impl Godric {
             })
         })
         .map(Message::Backend)
+    }
+    fn tick(&self) -> Subscription<Message> {
+        iced::time::every(std::time::Duration::from_millis(100)).map(|_| Message::Tick)
     }
 }
