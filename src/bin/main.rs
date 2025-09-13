@@ -5,7 +5,8 @@ use godric::{
 };
 
 use color_eyre::Result;
-use iced::{Element, Subscription, Task, futures::SinkExt};
+use futures::SinkExt;
+use iced::{Element, Subscription, Task};
 use tokio::sync::mpsc;
 
 pub fn main() -> Result<()> {
