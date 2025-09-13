@@ -217,25 +217,3 @@ impl Home {
         comparison.into()
     }
 }
-
-pub fn fetch_books(
-    books: Vec<BookInfo>,
-    image_dir: PathBuf,
-) -> impl Stream<Item = (usize, Result<Book, book::Error>)> {
-    let number_of_books = books.len();
-    let client = reqwest::Client::new();
-    let mut book_requests = vec![];
-    for (i, BookInfo { title, url }) in books.into_iter().enumerate() {
-        // Cloning the client *should* be okay, because it uses an Arc internally. So, new clones should refer to the same client after all
-        let client = client.clone();
-        let image_dir = image_dir.clone();
-        book_requests.push(async move {
-            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-            println!("Fetching book {}/{}:", i + 1, number_of_books);
-            println!("Url: {url}");
-            (i, Book::fetch(url, &client, image_dir).await)
-        })
-    }
-
-    iced::futures::stream::iter(book_requests).buffered(5)
-}
