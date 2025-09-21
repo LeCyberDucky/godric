@@ -36,6 +36,30 @@ impl Book {
     pub const THUMBNAIL_HEIGHT: u32 = 126;
 }
 
+impl TryFrom<crate::backend::goodreads::book::Book> for Book {
+    type Error = Error;
+
+    fn try_from(
+        info: crate::backend::goodreads::book::Book,
+    ) -> std::result::Result<Self, Self::Error> {
+        let thumbnail = image::ImageReader::open(&info.cover_cache)
+            .map_err(|error| Error::Image(error.to_string()))?
+            .decode()
+            .map_err(|error| Error::Image(error.to_string()))?;
+        let thumbnail =
+            create_thumbnail(&thumbnail, Self::THUMBNAIL_WIDTH, Self::THUMBNAIL_HEIGHT)?;
+        let thumbnail = iced::widget::image::Handle::from_rgba(
+            thumbnail.width(),
+            thumbnail.height(),
+            thumbnail.as_bytes().to_owned(),
+        );
+        Ok(Self {
+            info,
+            thumbnail: thumbnail,
+        })
+    }
+}
+
 impl Default for Book {
     fn default() -> Self {
         let thumbnail = iced::widget::image::Handle::from_bytes(COVER_PLACEHOLDER_THUMBNAIL);
