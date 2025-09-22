@@ -22,3 +22,4 @@ Cargo.lock
 /Assets/Icons
 /src/bin/sandbox*.rs
 examples/iced_sandbox.rs
+examples/async.rs
