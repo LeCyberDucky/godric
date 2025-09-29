@@ -19,11 +19,18 @@ fn main() {
         .and_then(|json| json.get("pageProps"))
         .and_then(|json| json.get("apolloState"))
         .unwrap()
-        .as_object().unwrap();
+        .as_object()
+        .unwrap();
 
-    let author = page.keys().find(|dings| dings.contains("Contributor:")).unwrap();
-    let author = page.get(author).and_then(|inner| inner.get("name")).unwrap();
-    
+    let author = page
+        .keys()
+        .find(|dings| dings.contains("Contributor:"))
+        .unwrap();
+    let author = page
+        .get(author)
+        .and_then(|inner| inner.get("name"))
+        .unwrap();
+
     let book_info = page.keys().find(|dings| dings.contains("Book:")).unwrap();
     let book_info = page.get(book_info).unwrap();
 

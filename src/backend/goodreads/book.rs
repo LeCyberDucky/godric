@@ -167,7 +167,8 @@ async fn cache_book_cover(
 }
 
 pub struct BookList {
-    pub queue: std::pin::Pin<Box<dyn futures::Stream<Item = Result<Book, Error>> + Send>>,
+    pub queue:
+        std::pin::Pin<Box<dyn futures::Stream<Item = (url::Url, Result<Book, Error>)> + Send>>,
     books: Vec<Book>,
     cache_directory: std::sync::Arc<TempDir>, // TempDir isn't Clone, so we arc it
 }
@@ -195,7 +196,10 @@ impl BookList {
                 tokio::time::sleep(std::time::Duration::from_millis(200)).await;
                 println!("Fetching book {}/{}:", i + 1, number_of_urls);
                 println!("Url: {url}");
-                Book::fetch(url, &client, image_dir.path().into()).await
+                (
+                    url.clone(),
+                    Book::fetch(url, &client, image_dir.path().into()).await,
+                )
             });
         }
 

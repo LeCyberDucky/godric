@@ -21,7 +21,7 @@ use tempfile::TempDir;
 
 #[derive(Clone, Debug)]
 pub struct Home {
-    books: Vec<Option<Result<Book, book::Error>>>,
+    books: Vec<(url::Url, Option<Result<Book, book::Error>>)>,
     selected_book: Option<usize>,
     cache_directory: Arc<TempDir>, // TempDir isn't Clone, so we arc it
 }
@@ -46,9 +46,10 @@ impl From<Home> for State {
 
 #[derive(Clone, Debug)]
 pub enum Message {
-    BookFetched(
-        Result<crate::backend::goodreads::book::Book, crate::backend::goodreads::book::Error>,
-    ),
+    BookFetched {
+        url: url::Url,
+        book: Result<crate::backend::goodreads::book::Book, crate::backend::goodreads::book::Error>,
+    },
     BookSelected(usize),
 }
 
@@ -61,7 +62,9 @@ impl From<Message> for scene::goodreads::Message {
 impl From<crate::backend::goodreads::home::Output> for Message {
     fn from(output: crate::backend::goodreads::home::Output) -> Self {
         match output {
-            crate::backend::goodreads::home::Output::Book(book) => Self::BookFetched(book),
+            crate::backend::goodreads::home::Output::Book { url, book } => {
+                Self::BookFetched { url, book }
+            }
         }
     }
 }
@@ -81,7 +84,7 @@ impl TryFrom<scene::goodreads::Message> for Message {
 }
 
 impl Home {
-    pub fn new(books: Vec<Option<Result<Book, book::Error>>>) -> Self {
+    pub fn new(books: Vec<(url::Url, Option<Result<Book, book::Error>>)>) -> Self {
         Self {
             books,
             ..Default::default()
@@ -105,19 +108,24 @@ impl Home {
 
         match message {
             Ok(message) => match message {
-                Message::BookFetched(book) => {
+                Message::BookFetched { url, book } => {
                     if let Err(ref error) = book {
                         todo!("{error}")
                     }
-                    todo!("Display fetched book!");
-                }
-                // Message::BookFetched((i, book)) => {
-                //     if let Err(ref error) = book {
-                //         todo!("{error}")
-                //     }
 
-                //     self.books[i] = Some(book);
-                // }
+                    match self.books.iter_mut().find(|element| element.0 == url) {
+                        Some(entry) => {
+                            let book = book.map(|content| {
+                                content.try_into().expect("Book should exist in GUI list")
+                            });
+                            entry.1 =
+                                Some(book.map_err(|e| {
+                                    scene::goodreads::book::Error::Other(e.to_string())
+                                }))
+                        }
+                        None => todo!(),
+                    }
+                }
                 Message::BookSelected(selection) => self.selected_book = Some(selection),
             },
             Err(error) => todo!(),
@@ -141,7 +149,7 @@ impl Home {
         // Display page count
 
         let book = if let Some(id) = self.selected_book
-            && let Some(book) = &self.books[id]
+            && let (url, Some(book)) = &self.books[id]
         {
             book
         } else {
@@ -170,7 +178,7 @@ impl Home {
         let covers: Vec<_> = self
             .books
             .iter()
-            .map(|book| match book {
+            .map(|(url, book)| match book {
                 Some(book) => match book {
                     Ok(book) => &book.thumbnail,
                     Err(error) => &cover_placeholder,

@@ -47,7 +47,10 @@ impl TryFrom<goodreads::Input> for Input {
 
 #[derive(Clone, Debug)]
 pub enum Output {
-    Book(Result<goodreads::book::Book, goodreads::book::Error>),
+    Book {
+        url: url::Url,
+        book: Result<goodreads::book::Book, goodreads::book::Error>,
+    },
 }
 
 impl From<Output> for goodreads::Output {
@@ -96,7 +99,12 @@ impl Home {
         //     println!("Downloaded book: {}!", book.unwrap().title);
         // }
 
-        let output = self.books.queue.next().await.map(Output::Book);
+        let output = self
+            .books
+            .queue
+            .next()
+            .await
+            .map(|(url, book)| Output::Book { url, book });
 
         Ok((self.into(), output.map(|output| output.into())))
     }
