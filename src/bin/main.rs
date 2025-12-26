@@ -12,17 +12,19 @@ use tokio::sync::mpsc;
 pub fn main() -> Result<()> {
     color_eyre::install()?;
     dotenv::dotenv()?;
-    Ok(iced::application(Godric::default, Godric::update, Godric::view)
-    .title("Godric")
-        .theme(Godric::theme)
-        .subscription(|x| {
-            iced::Subscription::batch(vec![Godric::backend_subscription(x), Godric::tick(x)])
-        })
-        .window(iced::window::Settings {
-            icon: iced::window::icon::from_file("Assets/Logo/Icon - zoomed.jpg").ok(),
-            ..Default::default()
-        })
-        .run()?)
+    Ok(
+        iced::application(Godric::default, Godric::update, Godric::view)
+            .title("Godric")
+            .theme(Godric::theme)
+            .subscription(|x| {
+                iced::Subscription::batch(vec![Godric::backend_subscription(x), Godric::tick(x)])
+            })
+            .window(iced::window::Settings {
+                icon: iced::window::icon::from_file("Assets/Logo/Icon - zoomed.jpg").ok(),
+                ..Default::default()
+            })
+            .run()?,
+    )
 }
 
 struct Godric {

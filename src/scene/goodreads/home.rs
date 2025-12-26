@@ -23,7 +23,7 @@ use tempfile::TempDir;
 pub struct Home {
     books: Vec<(url::Url, Option<Result<Book, book::Error>>)>,
     selected_book: Option<usize>,
-    cover_placeholder: iced::widget::image::Handle
+    cover_placeholder: iced::widget::image::Handle,
 }
 
 impl Default for Home {
@@ -31,7 +31,9 @@ impl Default for Home {
         Self {
             books: Default::default(),
             selected_book: Default::default(),
-            cover_placeholder: iced::widget::image::Handle::from_bytes(book::COVER_PLACEHOLDER_THUMBNAIL)
+            cover_placeholder: iced::widget::image::Handle::from_bytes(
+                book::COVER_PLACEHOLDER_THUMBNAIL,
+            ),
         }
     }
 }
@@ -185,13 +187,12 @@ impl Home {
             .map(|(i, cover)| {
                 iced::widget::button(iced::widget::image(cover))
                     .on_press(Message::BookSelected(i))
-                    .width(iced::Length::Fixed(100.0))
-                    .padding(iced::Padding::new(2.0))
+                    .padding(iced::Padding::new(4.0))
             })
             .collect();
 
         let grid_height = 3;
-        let grid_spacing = 0;
+        let grid_spacing = 1;
 
         scrollable(
             iced::widget::row({
@@ -209,9 +210,8 @@ impl Home {
             })
             .spacing(grid_spacing),
         )
-        .direction(scrollable::Direction::Horizontal(
-            scrollable::Scrollbar::new(),
-        ))
+        .horizontal()
+        .auto_scroll(true)
         .into()
     }
 
