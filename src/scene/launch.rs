@@ -161,7 +161,8 @@ impl Launch {
             };
 
             let browser_headless_control = iced::widget::container(
-                iced::widget::checkbox("Headless browser", self.browser_headless)
+                iced::widget::checkbox(self.browser_headless)
+                    .label("Headless browser")
                     .on_toggle(Message::BrowserHeadlessToggle),
             );
 
@@ -191,7 +192,8 @@ impl Launch {
 
         let cache_settings = {
             let temporary_path_toggle = iced::widget::container(
-                iced::widget::checkbox("Temporary path", self.cache.use_temporary())
+                iced::widget::checkbox(self.cache.use_temporary())
+                    .label("Temporary path")
                     .on_toggle(Message::CacheTemporaryToggle),
             );
 

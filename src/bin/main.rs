@@ -12,7 +12,8 @@ use tokio::sync::mpsc;
 pub fn main() -> Result<()> {
     color_eyre::install()?;
     dotenv::dotenv()?;
-    Ok(iced::application("Godric", Godric::update, Godric::view)
+    Ok(iced::application(Godric::default, Godric::update, Godric::view)
+    .title("Godric")
         .theme(Godric::theme)
         .subscription(|x| {
             iced::Subscription::batch(vec![Godric::backend_subscription(x), Godric::tick(x)])
@@ -21,7 +22,7 @@ pub fn main() -> Result<()> {
             icon: iced::window::icon::from_file("Assets/Logo/Icon - zoomed.jpg").ok(),
             ..Default::default()
         })
-        .run_with(|| (Godric::default(), Task::none()))?)
+        .run()?)
 }
 
 struct Godric {
@@ -78,7 +79,7 @@ impl Godric {
 
     fn backend_subscription(&self) -> Subscription<Message> {
         Subscription::run(|| {
-            iced::stream::channel(0, |mut ui| async move {
+            iced::stream::channel(0, async |mut ui| {
                 let (sender, mut receiver) = mpsc::channel(crate::backend::Connection::CAPACITY);
                 let mut backend = crate::backend::Backend::default();
 
@@ -115,6 +116,7 @@ impl Godric {
         })
         .map(Message::Backend)
     }
+
     fn tick(&self) -> Subscription<Message> {
         iced::time::every(std::time::Duration::from_millis(100)).map(|_| Message::Tick)
     }

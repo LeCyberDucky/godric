@@ -10,7 +10,7 @@ default-run = "main"
 color-eyre = "0.6.3"
 dotenv = "0.15.0"
 futures = "0.3.31"
-iced = { version = "0.13", features = ["tokio", "image", "canvas"] }
+iced = { version = "0.14", features = ["tokio", "image", "canvas"] }
 image = "0.25.6"
 okolors = "0.8.1"
 rand = "0.8.5"

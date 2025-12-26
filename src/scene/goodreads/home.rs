@@ -222,7 +222,7 @@ impl Home {
             iced::widget::column![
                 iced::widget::container(iced::widget::text(book.info.title)).padding(5),
                 iced::widget::container(iced::widget::text(book.info.author)).padding(5),
-                iced::widget::horizontal_rule(2),
+                iced::widget::rule::horizontal(2),
                 iced::widget::scrollable(
                     iced::widget::container(iced::widget::text(book.info.blurb)).padding(5)
                 )
