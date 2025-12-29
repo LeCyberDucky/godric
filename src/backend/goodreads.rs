@@ -78,10 +78,11 @@ impl State {
     pub async fn update(
         self,
         browser: &mut tf::WebDriver,
+        cache: crate::common::cache::Config,
         input: Input,
     ) -> Result<(backend::State, Option<backend::Output>), Error> {
         let (state, output) = match self {
-            State::Welcome(state) => state.update(browser, input.try_into()?).await?,
+            State::Welcome(state) => state.update(browser, cache, input.try_into()?).await?,
             State::Home(state) => state.update(browser, input.try_into()?).await?,
         };
 

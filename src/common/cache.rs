@@ -40,6 +40,14 @@ impl Config {
         &self.temporary_path
     }
 
+    pub fn active_path(&self) -> &std::path::Path {
+        if self.use_temporary {
+            self.temporary_path().path()
+        } else {
+            self.path()
+        }
+    }
+
     pub fn with_path(mut self, path: std::path::PathBuf) -> Self {
         self.path = path;
         self.validate();

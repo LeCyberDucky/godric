@@ -72,14 +72,12 @@ impl From<Home> for State {
 }
 
 impl Home {
-    pub fn new(user_id: String, books: Vec<BookInfo>) -> Self {
+    pub fn new(user_id: String, books: Vec<BookInfo>, cache: crate::common::cache::Config) -> Self {
         let books: Vec<_> = books.into_iter().map(|info| info.url).collect();
         let books = BookList::new(
             books,
             reqwest::Client::new(),
-            TempDir::new()
-                .expect("Failed to create temporary directory to store book covers")
-                .into(),
+            cache
         );
         Self { user_id, books }
     }

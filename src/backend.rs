@@ -102,7 +102,7 @@ impl Backend {
 
                 match connection {
                     Ok(connection) => state
-                        .update(&mut connection.browser, input)
+                        .update(&mut connection.browser, self.cache.clone(), input)
                         .await
                         .map_err(|error| error.into()),
                     Err(error) => {

@@ -193,10 +193,8 @@ impl Launch {
 
             let cache_path = {
                 let title = iced::widget::text("Cache location");
-                let path = if self.cache.use_temporary() {self.cache.temporary_path().path()} else {self.cache.path()};
-                let path = path.to_string_lossy();
                 let input =
-                    iced::widget::TextInput::new("./Cache", &path)
+                    iced::widget::TextInput::new("./Cache", &self.cache.active_path().to_string_lossy())
                         .style(|theme: &Theme, status| {
                             let mut style = iced::widget::text_input::default(theme, status);
                             if !self.cache.valid() {

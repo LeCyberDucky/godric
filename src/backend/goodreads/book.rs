@@ -170,7 +170,7 @@ pub struct BookList {
     pub queue:
         std::pin::Pin<Box<dyn futures::Stream<Item = (url::Url, Result<Book, Error>)> + Send>>,
     books: Vec<Book>,
-    cache_directory: std::sync::Arc<TempDir>, // TempDir isn't Clone, so we arc it
+    cache: crate::common::cache::Config
 }
 
 impl std::fmt::Debug for BookList {
@@ -185,20 +185,20 @@ impl BookList {
     pub fn new(
         urls: Vec<url::Url>,
         http_client: reqwest::Client,
-        cache_directory: std::sync::Arc<TempDir>,
+        cache: crate::common::cache::Config,
     ) -> Self {
         let number_of_urls = urls.len();
         let mut work = vec![];
         for (i, url) in urls.into_iter().enumerate() {
             let client = http_client.clone();
-            let image_dir = cache_directory.clone();
+            let image_dir = cache.active_path().to_path_buf();
             work.push(async move {
                 tokio::time::sleep(std::time::Duration::from_millis(200)).await;
                 println!("Fetching book {}/{}:", i + 1, number_of_urls);
                 println!("Url: {url}");
                 (
                     url.clone(),
-                    Book::fetch(url, &client, image_dir.path().into()).await,
+                    Book::fetch(url, &client, image_dir.as_path().into()).await,
                 )
             });
         }
@@ -208,7 +208,7 @@ impl BookList {
         Self {
             queue,
             books: vec![],
-            cache_directory,
+            cache,
         }
     }
 }
