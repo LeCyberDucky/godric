@@ -23,3 +23,4 @@ Cargo.lock
 /src/bin/sandbox*.rs
 examples/iced_sandbox.rs
 examples/async.rs
+/Cache

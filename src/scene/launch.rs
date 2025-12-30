@@ -1,4 +1,4 @@
-use iced::Task;
+use iced::{Task, Theme, widget::text_input::default};
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -128,7 +128,9 @@ impl Launch {
             Message::BrowserHeadlessToggle(headless) => self.browser_headless = headless,
             Message::ModeSelected(mode) => self.mode = mode,
             Message::BackendConnected => println!("Backend connected!"),
-            Message::CachePathInput(path) => self.cache.path = path.into(),
+            Message::CachePathInput(path) => {
+                self.cache = cache::Config::new(path.into())
+            }
         };
 
         (state.unwrap_or(self.into()), output, Task::none())
@@ -186,7 +188,14 @@ impl Launch {
             let cache_path = {
                 let title = iced::widget::text("Cache location");
                 let input =
-                    iced::widget::TextInput::new("./Cache", &self.cache.path.to_string_lossy())
+                    iced::widget::TextInput::new("./Cache", &self.cache.path().to_string_lossy())
+                        .style(|theme: &Theme, status| {
+                            let mut style = iced::widget::text_input::default(theme, status);
+                            if !self.cache.valid() {
+                                style.border.color = theme.palette().danger;
+                            }
+                            style
+                        })
                         .on_input(Message::CachePathInput)
                         .padding(10);
                 iced::widget::column!(title, input)
@@ -218,7 +227,7 @@ impl Launch {
         let launch_button = iced::widget::Button::new(
             iced::widget::Container::new("Launch!").center_x(iced::Length::Fill),
         )
-        .on_press(Message::LaunchAttempt)
+        .on_press_maybe(self.cache.valid().then_some(Message::LaunchAttempt))
         .width(iced::Length::Fill);
 
         let launch_prompt = iced::widget::column!(mode_selection, launch_button)
