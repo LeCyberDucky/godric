@@ -80,6 +80,7 @@ impl Default for State {
 #[derive(Debug, Default)]
 pub struct Backend {
     browser_connection: Option<browser::Connection>,
+    cache: crate::common::cache::Config,
     state: State,
 }
 
@@ -89,7 +90,7 @@ impl Backend {
         let input_description = format!("{input:?}");
         let outcome: Result<(State, Option<Output>), Error> = match self.state {
             State::Uninitialized(state) if let Ok(input) = input.clone().try_into() => state
-                .update(&mut self.browser_connection, input)
+                .update(&mut self.browser_connection, &mut self.cache, input)
                 .await
                 .map_err(|error| error.into()),
 

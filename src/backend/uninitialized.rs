@@ -2,7 +2,7 @@ use color_eyre::Result;
 
 use crate::{
     backend::{self, State},
-    common::{browser, helpers::Mode},
+    common::{browser, cache, helpers::Mode},
 };
 
 #[derive(thiserror::Error, Debug, Clone)]
@@ -24,6 +24,7 @@ pub enum Input {
     Launch {
         browser_driver_config: browser::DriverConfig,
         mode: Mode,
+        cache: cache::Config,
     },
     Tick,
 }
@@ -73,13 +74,17 @@ impl Uninitialized {
     pub async fn update(
         self,
         connection: &mut Option<browser::Connection>,
+        cache_config: &mut cache::Config,
         input: Input,
     ) -> Result<(State, Option<backend::Output>), Error> {
         match input {
             Input::Launch {
                 browser_driver_config,
                 mode,
+                cache,
             } => {
+                *cache_config = cache;
+                
                 if connection.is_none() {
                     match browser::Connection::new(&browser_driver_config).await {
                         Ok(new_connection) => *connection = Some(new_connection),
