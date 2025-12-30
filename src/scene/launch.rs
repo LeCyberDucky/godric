@@ -18,7 +18,6 @@ pub enum Message {
     BrowserHeadlessToggle(bool),
     ModeSelected(crate::common::helpers::Mode),
     BackendConnected,
-    CacheEnableToggle(bool),
     CachePathInput(String),
 }
 
@@ -129,7 +128,6 @@ impl Launch {
             Message::BrowserHeadlessToggle(headless) => self.browser_headless = headless,
             Message::ModeSelected(mode) => self.mode = mode,
             Message::BackendConnected => println!("Backend connected!"),
-            Message::CacheEnableToggle(enabled) => self.cache.enabled = enabled,
             Message::CachePathInput(path) => self.cache.path = path.into(),
         };
 
@@ -185,12 +183,6 @@ impl Launch {
         };
 
         let cache_settings = {
-            let cache_toggle = iced::widget::container(
-                iced::widget::checkbox("Enable cache", self.cache.enabled)
-                    .on_toggle(Message::CacheEnableToggle),
-            );
-
-
             let cache_path = {
                 let title = iced::widget::text("Cache location");
                 let input =
@@ -200,7 +192,7 @@ impl Launch {
                 iced::widget::column!(title, input)
             };
 
-            iced::widget::row!(cache_path, cache_toggle)
+            iced::widget::row!(cache_path)
                 .align_y(iced::Alignment::End)
                 .spacing(10)
                 .padding(10)
