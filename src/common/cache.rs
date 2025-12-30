@@ -8,6 +8,7 @@ pub struct Config {
     temporary_path: std::sync::Arc<TempDir>, // TempDir isn't Clone, so we arc it
     use_temporary: bool,
     valid: bool,
+    subdirectory: String
 }
 
 impl Config {
@@ -17,7 +18,7 @@ impl Config {
                 .into();
         let valid = dir_is_valid(temporary_path.path());
 
-        Self { path: "".into(), valid, temporary_path, use_temporary: true }
+        Self { path: "".into(), valid, temporary_path, use_temporary: true, subdirectory: "".to_string() }
     }
 
     pub fn valid(&self) -> bool {
@@ -65,6 +66,20 @@ impl Config {
 
     pub fn with_use_temporary(mut self, use_temporary: bool) -> Self {
         self.set_use_temporary(use_temporary);
+        self
+    }
+
+    fn create_subdirectory(&self) -> std::io::Result<()> {
+        let path = self.active_path().join(&self.subdirectory);
+        if !path.exists() {
+            std::fs::create_dir(path)?;
+        }
+        Ok(())
+    }
+
+    pub fn with_sub_directory(mut self, subdirectory: String) -> Self {
+        self.subdirectory = subdirectory;
+        self.create_subdirectory();
         self
     }
 }
