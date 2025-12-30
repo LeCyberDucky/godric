@@ -19,6 +19,7 @@ pub enum Message {
     ModeSelected(crate::common::helpers::Mode),
     BackendConnected,
     CachePathInput(String),
+    CacheTemporaryToggle(bool)
 }
 
 impl TryFrom<crate::scene::Message> for Message {
@@ -128,9 +129,8 @@ impl Launch {
             Message::BrowserHeadlessToggle(headless) => self.browser_headless = headless,
             Message::ModeSelected(mode) => self.mode = mode,
             Message::BackendConnected => println!("Backend connected!"),
-            Message::CachePathInput(path) => {
-                self.cache = cache::Config::new(path.into())
-            }
+            Message::CachePathInput(path) => self.cache = self.cache.with_path(path.into()),
+            Message::CacheTemporaryToggle(enable) => self.cache.set_use_temporary(enable),
         };
 
         (state.unwrap_or(self.into()), output, Task::none())
@@ -185,10 +185,17 @@ impl Launch {
         };
 
         let cache_settings = {
+            let temporary_path_toggle = iced::widget::container(
+                iced::widget::checkbox("Temporary path", self.cache.use_temporary())
+                    .on_toggle(Message::CacheTemporaryToggle),
+            );
+
             let cache_path = {
                 let title = iced::widget::text("Cache location");
+                let path = if self.cache.use_temporary() {self.cache.temporary_path().path()} else {self.cache.path()};
+                let path = path.to_string_lossy();
                 let input =
-                    iced::widget::TextInput::new("./Cache", &self.cache.path().to_string_lossy())
+                    iced::widget::TextInput::new("./Cache", &path)
                         .style(|theme: &Theme, status| {
                             let mut style = iced::widget::text_input::default(theme, status);
                             if !self.cache.valid() {
@@ -196,12 +203,12 @@ impl Launch {
                             }
                             style
                         })
-                        .on_input(Message::CachePathInput)
+                        .on_input_maybe((!self.cache.use_temporary()).then_some(Message::CachePathInput))
                         .padding(10);
                 iced::widget::column!(title, input)
             };
 
-            iced::widget::row!(cache_path)
+            iced::widget::row!(cache_path, temporary_path_toggle)
                 .align_y(iced::Alignment::End)
                 .spacing(10)
                 .padding(10)

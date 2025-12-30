@@ -1,31 +1,68 @@
+use tempfile::TempDir;
+
+use crate::common::helpers::dir_is_valid;
+
 #[derive(Clone, Debug)]
 pub struct Config {
     path: std::path::PathBuf,
+    temporary_path: std::sync::Arc<TempDir>, // TempDir isn't Clone, so we arc it
+    use_temporary: bool,
     valid: bool,
 }
 
 impl Config {
-    pub fn new(path: std::path::PathBuf) -> Self {
-        let valid = path.is_dir()
-            && std::fs::metadata(&path).is_ok_and(|meta| !meta.permissions().readonly());
+    pub fn new() -> Self {
+        let temporary_path: std::sync::Arc<TempDir> = TempDir::new()
+                .expect("Failed to create temporary directory to store book covers")
+                .into();
+        let valid = dir_is_valid(temporary_path.path());
 
-        Self {
-            path,
-            valid,
-        }
+        Self { path: "".into(), valid, temporary_path, use_temporary: true }
     }
 
     pub fn valid(&self) -> bool {
         self.valid
     }
 
+    fn validate(&mut self) {
+        self.valid = if self.use_temporary {
+            dir_is_valid(self.temporary_path.path())
+        } else {
+            dir_is_valid(&self.path)
+        };
+    }
+
     pub fn path(&self) -> &std::path::PathBuf {
         &self.path
+    }
+    
+    pub fn temporary_path(&self) -> &TempDir {
+        &self.temporary_path
+    }
+
+    pub fn with_path(mut self, path: std::path::PathBuf) -> Self {
+        self.path = path;
+        self.validate();
+        self
+    }
+    
+    pub fn use_temporary(&self) -> bool {
+        self.use_temporary
+    }
+    
+    pub fn set_use_temporary(&mut self, use_temporary: bool) {
+        self.use_temporary = use_temporary;
+        self.validate();
+    }
+
+    pub fn with_use_temporary(mut self, use_temporary: bool) -> Self {
+        self.set_use_temporary(use_temporary);
+        self
     }
 }
 
 impl Default for Config {
     fn default() -> Self {
-        Self::new("./Cache".into())
+        Self::new().with_path("./Cache".into()).with_use_temporary(false)
     }
 }
