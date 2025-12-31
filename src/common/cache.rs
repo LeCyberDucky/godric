@@ -1,6 +1,18 @@
-use tempfile::TempDir;
-
 use crate::common::helpers::dir_is_valid;
+use color_eyre::eyre::Result;
+use std::{collections::HashMap, io::Write};
+use tempfile::TempDir;
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("Io error")]
+    Io(#[from] std::io::Error),
+    #[error("Deserialization failed")]
+    Deserialization(#[from] ron::de::SpannedError),
+    #[error("Serialization failed")]
+    Serialization(#[from] ron::Error),
+}
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -94,5 +106,82 @@ impl Default for Config {
             .expect("Failed to initialize cache.")
             .with_root("./Cache".into())
             .with_use_temporary(false)
+    }
+}
+
+pub trait CacheKey = std::fmt::Debug + Eq + std::hash::Hash + serde::Serialize + for<'a> serde::Deserialize<'a>;
+pub trait CacheValue = std::fmt::Debug + serde::Serialize + for<'a> serde::Deserialize<'a>;
+
+#[derive(Debug)]
+pub struct Cache<K, V> {
+    index: HashMap<K, V>,
+    directory: std::path::PathBuf,
+    index_path: std::path::PathBuf,
+}
+
+impl<K, V> Default for Cache<K, V> 
+where K: CacheKey, V: CacheValue
+{
+    fn default() -> Self {
+        Config::default().try_into().expect("Failed to initialize default cache")
+    }
+}
+
+impl<K, V> TryFrom<Config> for Cache<K, V>
+where 
+K: CacheKey,
+V: CacheValue
+{
+    type Error = Error;
+
+    fn try_from(config: Config) -> Result<Self, Self::Error> {
+        // Attempt to load index
+        // Create index if not available
+        // Fail if nothing works
+        let directory = config.get_subdirectory()?;
+        let index_path = directory.join("index.ron");
+        let index_file = std::fs::File::options()
+            .create(true)
+            .read(true)
+            .open(&index_path)?;
+        let index = ron::de::from_reader(std::io::BufReader::new(&index_file))?;
+
+        Ok(Self {
+            index,
+            directory,
+            index_path,
+        })
+    }
+}
+
+impl<K, V> Cache<K, V> 
+where 
+K: CacheKey,
+V: CacheValue
+
+{
+    pub fn get(&self, key: &K) -> Option<&V> {
+        self.index.get(key)
+    }
+
+    /// Inserts an object into the cache and writes the cache to file.
+    /// If the cache already contains an entry for the object, the entry is updated.
+    pub fn push(
+        &mut self,
+        key: K,
+        value: V,
+    ) -> Result<(), Error> {
+        self.index.insert(key, value);
+        let temp_file_path = self.directory.join("index.ron.tmp");
+        let mut temp_file = std::fs::File::create(&temp_file_path)?;
+        let mut writer = std::io::BufWriter::new(temp_file);
+        ron::Options::default().to_io_writer_pretty(
+            &mut writer,
+            &self.index,
+            ron::ser::PrettyConfig::default(),
+        )?;
+        writer.flush()?;
+        std::fs::rename(&temp_file_path, &self.index_path)?;
+        Ok(())
     }
 }

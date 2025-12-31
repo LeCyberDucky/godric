@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 #![feature(if_let_guard)]
+#![feature(trait_alias)]
 #![allow(unused_variables)]
 pub mod backend;
 pub mod common;
