@@ -106,12 +106,17 @@ impl Default for Config {
     fn default() -> Self {
         Self::new()
             .expect("Failed to initialize cache.")
-            .with_root("./Cache".into())
+            .with_root(
+                std::env::var("godric_cache_path")
+                    .unwrap_or("./Cache".to_string())
+                    .into(),
+            )
             .with_use_temporary(false)
     }
 }
 
-pub trait CacheKey = std::fmt::Debug + Eq + std::hash::Hash + serde::Serialize + for<'a> serde::Deserialize<'a>;
+pub trait CacheKey =
+    std::fmt::Debug + Eq + std::hash::Hash + serde::Serialize + for<'a> serde::Deserialize<'a>;
 pub trait CacheValue = std::fmt::Debug + serde::Serialize + for<'a> serde::Deserialize<'a>;
 
 #[derive(Debug)]
@@ -121,18 +126,22 @@ pub struct Cache<K, V> {
     index_path: std::path::PathBuf,
 }
 
-impl<K, V> Default for Cache<K, V> 
-where K: CacheKey, V: CacheValue
+impl<K, V> Default for Cache<K, V>
+where
+    K: CacheKey,
+    V: CacheValue,
 {
     fn default() -> Self {
-        Config::default().try_into().expect("Failed to initialize default cache")
+        Config::default()
+            .try_into()
+            .expect("Failed to initialize default cache")
     }
 }
 
 impl<K, V> TryFrom<Config> for Cache<K, V>
-where 
-K: CacheKey,
-V: CacheValue
+where
+    K: CacheKey,
+    V: CacheValue,
 {
     type Error = Error;
 
@@ -140,12 +149,13 @@ V: CacheValue
         // Attempt to load index
         // Create index if not available
         // Fail if nothing works
-        let directory = config.get_subdirectory().map_err(|e|Error::Io(e.to_string()))?;
+        let directory = config
+            .get_subdirectory()
+            .map_err(|e| Error::Io(e.to_string()))?;
         let index_path = directory.join("index.ron");
         let index = if let Ok(index_file) = std::fs::File::open(&index_path) {
             ron::de::from_reader(std::io::BufReader::new(&index_file))?
-        }
-        else {
+        } else {
             HashMap::new()
         };
 
@@ -157,11 +167,10 @@ V: CacheValue
     }
 }
 
-impl<K, V> Cache<K, V> 
-where 
-K: CacheKey,
-V: CacheValue
-
+impl<K, V> Cache<K, V>
+where
+    K: CacheKey,
+    V: CacheValue,
 {
     pub fn get(&self, key: &K) -> Option<&V> {
         self.index.get(key)
@@ -172,15 +181,16 @@ V: CacheValue
     pub fn push(&mut self, key: K, value: V) -> Result<(), Error> {
         self.index.insert(key, value);
         let temp_file_path = self.directory.join("index.ron.tmp");
-        let mut temp_file = std::fs::File::create(&temp_file_path).map_err(|e|Error::Io(e.to_string()))?;
+        let mut temp_file =
+            std::fs::File::create(&temp_file_path).map_err(|e| Error::Io(e.to_string()))?;
         let mut writer = std::io::BufWriter::new(temp_file);
         ron::Options::default().to_io_writer_pretty(
             &mut writer,
             &self.index,
             ron::ser::PrettyConfig::default(),
         )?;
-        writer.flush().map_err(|e|Error::Io(e.to_string()))?;
-        std::fs::rename(&temp_file_path, &self.index_path).map_err(|e|Error::Io(e.to_string()))?;
+        writer.flush().map_err(|e| Error::Io(e.to_string()))?;
+        std::fs::rename(&temp_file_path, &self.index_path).map_err(|e| Error::Io(e.to_string()))?;
         Ok(())
     }
 
