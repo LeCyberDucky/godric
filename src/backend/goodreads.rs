@@ -78,7 +78,7 @@ impl State {
     pub async fn update(
         self,
         browser: &mut tf::WebDriver,
-        cache: crate::common::cache::Config,
+        cache: std::sync::Arc<std::sync::RwLock<crate::common::cache::Cache<url::Url, crate::backend::goodreads::book::Book>>>,
         input: Input,
     ) -> Result<(backend::State, Option<backend::Output>), Error> {
         let (state, output) = match self {

@@ -1,6 +1,6 @@
 use crate::backend::goodreads::{
     self, State,
-    book::{BookInfo, BookList},
+    book::{Book, BookInfo, BookList},
 };
 use color_eyre::{
     Result,
@@ -75,7 +75,7 @@ impl Home {
     pub fn new(
         user_id: String,
         books: Vec<BookInfo>,
-        cache: crate::common::cache::Config,
+        cache: std::sync::Arc<std::sync::RwLock<crate::common::cache::Cache<url::Url, Book>>>,
     ) -> Result<Self> {
         let books: Vec<_> = books.into_iter().map(|info| info.url).collect();
         let books = BookList::new(books, reqwest::Client::new(), cache)?;

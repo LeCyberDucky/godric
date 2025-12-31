@@ -5,6 +5,8 @@ use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use tempfile::TempDir;
 
+use crate::common::cache;
+
 #[derive(Clone, Debug)]
 pub struct BookInfo {
     pub title: String,
@@ -16,7 +18,7 @@ const COVER_PLACEHOLDER_PATH: &str = r"..\..\..\Assets\Icons\cover_placeholder.j
 #[derive(Clone, Debug, thiserror::Error)]
 pub enum Error {
     #[error("{0}")]
-    Cache(String),
+    Cache(#[from] cache::Error),
     #[error("{0}")]
     Image(String),
     #[error("{0}")]
@@ -33,7 +35,7 @@ impl From<color_eyre::eyre::ErrReport> for Error {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Book {
     pub url: url::Url,
     pub title: String,
@@ -63,8 +65,42 @@ impl Book {
     pub async fn fetch(
         url: url::Url,
         client: &reqwest::Client,
-        image_dir: std::path::PathBuf,
+        cache: std::sync::Arc<std::sync::RwLock<cache::Cache<url::Url, Book>>>,
     ) -> Result<Self, Error> {
+        // Attempt to load book from cache
+        if let Some(book) = cache
+            .read()
+            .map_err(|e| cache::Error::Concurrency(e.to_string()))?
+            .get(&url)
+            .cloned()
+        {
+            return Ok(book);
+        }
+
+        // Download book from the internet and cache it, if unable to load from cache
+        let (mut book, image_source) = Self::download(url.clone(), client).await?;
+        let cache_directory = cache
+                .read()
+                .map_err(|e| cache::Error::Concurrency(e.to_string()))?
+                .directory().to_path_buf();
+        book.cover_cache = cache_book_cover(
+            image_source,
+            cache_directory,
+            client,
+        )
+        .await?;
+        cache
+            .write()
+            .map_err(|e| cache::Error::Concurrency(e.to_string()))?
+            .push(url, book.clone())?;
+
+        Ok(book)
+    }
+
+    pub async fn download(
+        url: url::Url,
+        client: &reqwest::Client,
+    ) -> Result<(Self, url::Url), Error> {
         use scraper::Html;
         use scraper::Selector;
 
@@ -116,15 +152,16 @@ impl Book {
             (title, author, blurb, image_source)
         };
 
-        let cover_cache = cache_book_cover(image_source, image_dir, client).await?;
-
-        Ok(Self {
-            url,
-            title,
-            author,
-            blurb,
-            cover_cache,
-        })
+        Ok((
+            Self {
+                url,
+                title,
+                author,
+                blurb,
+                ..Default::default()
+            },
+            image_source,
+        ))
     }
 }
 
@@ -172,7 +209,7 @@ pub struct BookList {
     pub queue:
         std::pin::Pin<Box<dyn futures::Stream<Item = (url::Url, Result<Book, Error>)> + Send>>,
     books: Vec<Book>,
-    cache: crate::common::cache::Config,
+    cache: std::sync::Arc<std::sync::RwLock<cache::Cache<url::Url, Book>>>,
 }
 
 impl std::fmt::Debug for BookList {
@@ -187,22 +224,20 @@ impl BookList {
     pub fn new(
         urls: Vec<url::Url>,
         http_client: reqwest::Client,
-        cache: crate::common::cache::Config,
+        cache: std::sync::Arc<std::sync::RwLock<cache::Cache<url::Url, Book>>>,
     ) -> Result<Self> {
         let number_of_urls = urls.len();
         let mut work = vec![];
         for (i, url) in urls.into_iter().enumerate() {
             let client = http_client.clone();
-            let image_dir = cache
-                .get_subdirectory()
-                .map_err(|e| Error::Cache(e.to_string()))?;
+            let cache_clone = cache.clone();
             work.push(async move {
                 tokio::time::sleep(std::time::Duration::from_millis(200)).await;
                 println!("Fetching book {}/{}:", i + 1, number_of_urls);
                 println!("Url: {url}");
                 (
                     url.clone(),
-                    Book::fetch(url, &client, image_dir.as_path().into()).await,
+                    Book::fetch(url, &client, cache_clone).await,
                 )
             });
         }

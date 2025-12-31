@@ -4,14 +4,16 @@ use std::{collections::HashMap, io::Write};
 use tempfile::TempDir;
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, thiserror::Error)]
 pub enum Error {
-    #[error("Io error")]
-    Io(#[from] std::io::Error),
+    #[error("Io error: {0}")]
+    Io(String),
     #[error("Deserialization failed")]
     Deserialization(#[from] ron::de::SpannedError),
     #[error("Serialization failed")]
     Serialization(#[from] ron::Error),
+    #[error("Cache concurrency access error")]
+    Concurrency(String),
 }
 
 #[derive(Clone, Debug)]
@@ -138,12 +140,12 @@ V: CacheValue
         // Attempt to load index
         // Create index if not available
         // Fail if nothing works
-        let directory = config.get_subdirectory()?;
+        let directory = config.get_subdirectory().map_err(|e|Error::Io(e.to_string()))?;
         let index_path = directory.join("index.ron");
         let index_file = std::fs::File::options()
             .create(true)
             .read(true)
-            .open(&index_path)?;
+            .open(&index_path).map_err(|e|Error::Io(e.to_string()))?;
         let index = ron::de::from_reader(std::io::BufReader::new(&index_file))?;
 
         Ok(Self {
@@ -166,22 +168,22 @@ V: CacheValue
 
     /// Inserts an object into the cache and writes the cache to file.
     /// If the cache already contains an entry for the object, the entry is updated.
-    pub fn push(
-        &mut self,
-        key: K,
-        value: V,
-    ) -> Result<(), Error> {
+    pub fn push(&mut self, key: K, value: V) -> Result<(), Error> {
         self.index.insert(key, value);
         let temp_file_path = self.directory.join("index.ron.tmp");
-        let mut temp_file = std::fs::File::create(&temp_file_path)?;
+        let mut temp_file = std::fs::File::create(&temp_file_path).map_err(|e|Error::Io(e.to_string()))?;
         let mut writer = std::io::BufWriter::new(temp_file);
         ron::Options::default().to_io_writer_pretty(
             &mut writer,
             &self.index,
             ron::ser::PrettyConfig::default(),
         )?;
-        writer.flush()?;
-        std::fs::rename(&temp_file_path, &self.index_path)?;
+        writer.flush().map_err(|e|Error::Io(e.to_string()))?;
+        std::fs::rename(&temp_file_path, &self.index_path).map_err(|e|Error::Io(e.to_string()))?;
         Ok(())
+    }
+
+    pub fn directory(&self) -> &std::path::Path {
+        self.directory.as_path()
     }
 }
