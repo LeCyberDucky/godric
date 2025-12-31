@@ -83,11 +83,8 @@ impl Uninitialized {
                 mode,
                 cache,
             } => {
-                // let subdirectory = cache.active_path().join(&mode.to_string());
-                // std::fs::create_dir(subdirectory);
-                // *cache_config = cache.with_path(subdirectory);
                 *cache_config = cache;
-                
+
                 if connection.is_none() {
                     match browser::Connection::new(&browser_driver_config).await {
                         Ok(new_connection) => *connection = Some(new_connection),

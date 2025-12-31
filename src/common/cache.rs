@@ -4,21 +4,25 @@ use crate::common::helpers::dir_is_valid;
 
 #[derive(Clone, Debug)]
 pub struct Config {
-    path: std::path::PathBuf,
-    temporary_path: std::sync::Arc<TempDir>, // TempDir isn't Clone, so we arc it
+    root: std::path::PathBuf,
+    temporary_root: std::sync::Arc<TempDir>, // TempDir isn't Clone, so we arc it
     use_temporary: bool,
     valid: bool,
-    subdirectory: String
+    subdirectory_stem: String,
 }
 
 impl Config {
-    pub fn new() -> Self {
-        let temporary_path: std::sync::Arc<TempDir> = TempDir::new()
-                .expect("Failed to create temporary directory to store book covers")
-                .into();
-        let valid = dir_is_valid(temporary_path.path());
+    pub fn new() -> std::io::Result<Self> {
+        let temporary_root: std::sync::Arc<TempDir> = TempDir::new()?.into();
+        let valid = dir_is_valid(temporary_root.path());
 
-        Self { path: "".into(), valid, temporary_path, use_temporary: true, subdirectory: "".to_string() }
+        Ok(Self {
+            root: "".into(),
+            valid,
+            temporary_root,
+            use_temporary: true,
+            subdirectory_stem: "".to_string(),
+        })
     }
 
     pub fn valid(&self) -> bool {
@@ -27,38 +31,38 @@ impl Config {
 
     fn validate(&mut self) {
         self.valid = if self.use_temporary {
-            dir_is_valid(self.temporary_path.path())
+            dir_is_valid(self.temporary_root.path())
         } else {
-            dir_is_valid(&self.path)
+            dir_is_valid(&self.root)
         };
     }
 
-    pub fn path(&self) -> &std::path::PathBuf {
-        &self.path
-    }
-    
-    pub fn temporary_path(&self) -> &TempDir {
-        &self.temporary_path
+    pub fn root(&self) -> &std::path::PathBuf {
+        &self.root
     }
 
-    pub fn active_path(&self) -> &std::path::Path {
+    pub fn temporary_root(&self) -> &TempDir {
+        &self.temporary_root
+    }
+
+    pub fn active_root(&self) -> &std::path::Path {
         if self.use_temporary {
-            self.temporary_path().path()
+            self.temporary_root().path()
         } else {
-            self.path()
+            self.root()
         }
     }
 
-    pub fn with_path(mut self, path: std::path::PathBuf) -> Self {
-        self.path = path;
+    pub fn with_root(mut self, root: std::path::PathBuf) -> Self {
+        self.root = root;
         self.validate();
         self
     }
-    
+
     pub fn use_temporary(&self) -> bool {
         self.use_temporary
     }
-    
+
     pub fn set_use_temporary(&mut self, use_temporary: bool) {
         self.use_temporary = use_temporary;
         self.validate();
@@ -69,23 +73,26 @@ impl Config {
         self
     }
 
-    fn create_subdirectory(&self) -> std::io::Result<()> {
-        let path = self.active_path().join(&self.subdirectory);
+    pub fn get_subdirectory(&self) -> std::io::Result<std::path::PathBuf> {
+        let path = self.active_root().join(&self.subdirectory_stem);
+        dbg!(&path);
         if !path.exists() {
-            std::fs::create_dir(path)?;
+            std::fs::create_dir(&path)?;
         }
-        Ok(())
+        Ok(path)
     }
 
-    pub fn with_sub_directory(mut self, subdirectory: String) -> Self {
-        self.subdirectory = subdirectory;
-        self.create_subdirectory();
+    pub fn with_subdirectory(mut self, stem: String) -> Self {
+        self.subdirectory_stem = stem;
         self
     }
 }
 
 impl Default for Config {
     fn default() -> Self {
-        Self::new().with_path("./Cache".into()).with_use_temporary(false)
+        Self::new()
+            .expect("Failed to initialize cache.")
+            .with_root("./Cache".into())
+            .with_use_temporary(false)
     }
 }

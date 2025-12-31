@@ -19,7 +19,7 @@ pub enum Message {
     ModeSelected(crate::common::helpers::Mode),
     BackendConnected,
     CachePathInput(String),
-    CacheTemporaryToggle(bool)
+    CacheTemporaryToggle(bool),
 }
 
 impl TryFrom<crate::scene::Message> for Message {
@@ -72,6 +72,7 @@ impl Default for Launch {
             headless: true,
         };
 
+        let mode = Mode::Goodreads;
         Self {
             browser_driver_ip_input: browser_driver_config.driver_address.ip().to_string(),
             browser_driver_port_input: browser_driver_config.driver_address.port().to_string(),
@@ -80,8 +81,8 @@ impl Default for Launch {
                 .and_then(|string| string.parse().ok())
                 .unwrap_or(true),
             browser: browser::Browser::Firefox,
-            cache: cache::Config::default(),
-            mode: Mode::Goodreads,
+            cache: cache::Config::default().with_subdirectory(mode.to_string()),
+            mode,
         }
     }
 }
@@ -128,9 +129,12 @@ impl Launch {
             Message::SettingsClick => todo!(),
             Message::BrowserSelected(browser) => self.browser = browser,
             Message::BrowserHeadlessToggle(headless) => self.browser_headless = headless,
-            Message::ModeSelected(mode) => self.mode = mode,
+            Message::ModeSelected(mode) => {
+                self.mode = mode;
+                self.cache = self.cache.with_subdirectory(mode.to_string())
+            }
             Message::BackendConnected => println!("Backend connected!"),
-            Message::CachePathInput(path) => self.cache = self.cache.with_path(path.into()),
+            Message::CachePathInput(path) => self.cache = self.cache.with_root(path.into()),
             Message::CacheTemporaryToggle(enable) => self.cache.set_use_temporary(enable),
         };
 
@@ -193,17 +197,19 @@ impl Launch {
 
             let cache_path = {
                 let title = iced::widget::text("Cache location");
-                let input =
-                    iced::widget::TextInput::new("./Cache", &self.cache.active_path().to_string_lossy())
-                        .style(|theme: &Theme, status| {
-                            let mut style = iced::widget::text_input::default(theme, status);
-                            if !self.cache.valid() {
-                                style.border.color = theme.palette().danger;
-                            }
-                            style
-                        })
-                        .on_input_maybe((!self.cache.use_temporary()).then_some(Message::CachePathInput))
-                        .padding(10);
+                let input = iced::widget::TextInput::new(
+                    "./Cache",
+                    &self.cache.active_root().to_string_lossy(),
+                )
+                .style(|theme: &Theme, status| {
+                    let mut style = iced::widget::text_input::default(theme, status);
+                    if !self.cache.valid() {
+                        style.border.color = theme.palette().danger;
+                    }
+                    style
+                })
+                .on_input_maybe((!self.cache.use_temporary()).then_some(Message::CachePathInput))
+                .padding(10);
                 iced::widget::column!(title, input)
             };
 

@@ -16,6 +16,8 @@ const COVER_PLACEHOLDER_PATH: &str = r"..\..\..\Assets\Icons\cover_placeholder.j
 #[derive(Clone, Debug, thiserror::Error)]
 pub enum Error {
     #[error("{0}")]
+    Cache(String),
+    #[error("{0}")]
     Image(String),
     #[error("{0}")]
     Other(String),
@@ -170,7 +172,7 @@ pub struct BookList {
     pub queue:
         std::pin::Pin<Box<dyn futures::Stream<Item = (url::Url, Result<Book, Error>)> + Send>>,
     books: Vec<Book>,
-    cache: crate::common::cache::Config
+    cache: crate::common::cache::Config,
 }
 
 impl std::fmt::Debug for BookList {
@@ -186,12 +188,14 @@ impl BookList {
         urls: Vec<url::Url>,
         http_client: reqwest::Client,
         cache: crate::common::cache::Config,
-    ) -> Self {
+    ) -> Result<Self> {
         let number_of_urls = urls.len();
         let mut work = vec![];
         for (i, url) in urls.into_iter().enumerate() {
             let client = http_client.clone();
-            let image_dir = cache.active_path().to_path_buf();
+            let image_dir = cache
+                .get_subdirectory()
+                .map_err(|e| Error::Cache(e.to_string()))?;
             work.push(async move {
                 tokio::time::sleep(std::time::Duration::from_millis(200)).await;
                 println!("Fetching book {}/{}:", i + 1, number_of_urls);
@@ -205,10 +209,10 @@ impl BookList {
 
         let queue = futures::stream::iter(work).buffered(5).boxed();
 
-        Self {
+        Ok(Self {
             queue,
             books: vec![],
             cache,
-        }
+        })
     }
 }

@@ -72,14 +72,14 @@ impl From<Home> for State {
 }
 
 impl Home {
-    pub fn new(user_id: String, books: Vec<BookInfo>, cache: crate::common::cache::Config) -> Self {
+    pub fn new(
+        user_id: String,
+        books: Vec<BookInfo>,
+        cache: crate::common::cache::Config,
+    ) -> Result<Self> {
         let books: Vec<_> = books.into_iter().map(|info| info.url).collect();
-        let books = BookList::new(
-            books,
-            reqwest::Client::new(),
-            cache
-        );
-        Self { user_id, books }
+        let books = BookList::new(books, reqwest::Client::new(), cache)?;
+        Ok(Self { user_id, books })
     }
 
     pub async fn update(

@@ -76,7 +76,7 @@ impl Welcome {
                     .await
                     .context("Failed to switch to Home state")?;
 
-                let state = Home::new(user_id, books.clone(), cache);
+                let state = Home::new(user_id, books.clone(), cache)?;
                 Ok((state.into(), Some(Output::LoginSuccess { books }.into())))
             }
             Input::Tick => Ok((self.into(), None)),
