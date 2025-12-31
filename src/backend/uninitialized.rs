@@ -11,7 +11,7 @@ pub enum Error {
     BrowserConnection(String),
     #[error("")]
     Other(String),
-        #[error("{0}")]
+    #[error("{0}")]
     Cache(#[from] cache::Error),
 }
 
@@ -72,8 +72,7 @@ impl From<Uninitialized> for State {
 #[derive(Clone, Debug, Default)]
 pub struct Uninitialized {}
 
-impl Uninitialized
-{
+impl Uninitialized {
     pub async fn update(
         self,
         connection: &mut Option<browser::Connection>,
@@ -88,17 +87,22 @@ impl Uninitialized
                 if connection.is_none() {
                     match browser::Connection::new(&browser_driver_config).await {
                         Ok(new_connection) => *connection = Some(new_connection),
-        Err(error) => return Err(Error::BrowserConnection(error.to_string())),
+                        Err(error) => return Err(Error::BrowserConnection(error.to_string())),
                     }
                 }
 
                 match mode {
                     Mode::Goodreads => {
-                        let cache = std::sync::Arc::new(std::sync::RwLock::new(cache_config.try_into()?));
+                        let cache =
+                            std::sync::Arc::new(std::sync::RwLock::new(cache_config.try_into()?));
                         Ok((
-                        State::Goodreads{cache , state: backend::goodreads::welcome::Welcome::default().into()},
-                        Some(Output::Initialized(mode).into()),
-                    ))},
+                            State::Goodreads {
+                                cache,
+                                state: backend::goodreads::welcome::Welcome::default().into(),
+                            },
+                            Some(Output::Initialized(mode).into()),
+                        ))
+                    }
                     Mode::Steam => todo!(),
                 }
             }

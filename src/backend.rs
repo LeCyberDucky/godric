@@ -67,7 +67,14 @@ pub enum Output {
 #[derive(Debug)]
 pub enum State {
     Uninitialized(Uninitialized),
-    Goodreads{cache: std::sync::Arc<std::sync::RwLock<crate::common::cache::Cache<url::Url, crate::backend::goodreads::book::Book>>>, state: goodreads::State},
+    Goodreads {
+        cache: std::sync::Arc<
+            std::sync::RwLock<
+                crate::common::cache::Cache<url::Url, crate::backend::goodreads::book::Book>,
+            >,
+        >,
+        state: goodreads::State,
+    },
     Error,
 }
 
@@ -78,14 +85,12 @@ impl Default for State {
 }
 
 #[derive(Debug, Default)]
-pub struct Backend
-{
+pub struct Backend {
     browser_connection: Option<browser::Connection>,
     state: State,
 }
 
-impl Backend
-{
+impl Backend {
     pub async fn update(mut self, input: Input) -> (Self, Result<Option<Output>, Error>) {
         let state_description = format!("{:?}", self.state);
         let input_description = format!("{input:?}");
@@ -95,7 +100,7 @@ impl Backend
                 .await
                 .map_err(|error| error.into()),
 
-            State::Goodreads{cache, state} if let Ok(input) = input.clone().try_into() => {
+            State::Goodreads { cache, state } if let Ok(input) = input.clone().try_into() => {
                 let connection = self
                     .browser_connection
                     .as_mut()

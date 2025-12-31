@@ -80,15 +80,11 @@ impl Book {
         // Download book from the internet and cache it, if unable to load from cache
         let (mut book, image_source) = Self::download(url.clone(), client).await?;
         let cache_directory = cache
-                .read()
-                .map_err(|e| cache::Error::Concurrency(e.to_string()))?
-                .directory().to_path_buf();
-        book.cover_cache = cache_book_cover(
-            image_source,
-            cache_directory,
-            client,
-        )
-        .await?;
+            .read()
+            .map_err(|e| cache::Error::Concurrency(e.to_string()))?
+            .directory()
+            .to_path_buf();
+        book.cover_cache = cache_book_cover(image_source, cache_directory, client).await?;
         cache
             .write()
             .map_err(|e| cache::Error::Concurrency(e.to_string()))?
@@ -235,10 +231,7 @@ impl BookList {
                 tokio::time::sleep(std::time::Duration::from_millis(200)).await;
                 println!("Fetching book {}/{}:", i + 1, number_of_urls);
                 println!("Url: {url}");
-                (
-                    url.clone(),
-                    Book::fetch(url, &client, cache_clone).await,
-                )
+                (url.clone(), Book::fetch(url, &client, cache_clone).await)
             });
         }
 

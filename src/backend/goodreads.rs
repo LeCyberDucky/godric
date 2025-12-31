@@ -72,11 +72,19 @@ impl State {
     pub async fn update(
         self,
         browser: &mut tf::WebDriver,
-        cache: std::sync::Arc<std::sync::RwLock<crate::common::cache::Cache<url::Url, crate::backend::goodreads::book::Book>>>,
+        cache: std::sync::Arc<
+            std::sync::RwLock<
+                crate::common::cache::Cache<url::Url, crate::backend::goodreads::book::Book>,
+            >,
+        >,
         input: Input,
     ) -> Result<(backend::State, Option<backend::Output>), Error> {
         let (state, output) = match self {
-            State::Welcome(state) => state.update(browser, cache.clone(), input.try_into()?).await?,
+            State::Welcome(state) => {
+                state
+                    .update(browser, cache.clone(), input.try_into()?)
+                    .await?
+            }
             State::Home(state) => state.update(browser, input.try_into()?).await?,
         };
 

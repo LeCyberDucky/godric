@@ -66,7 +66,11 @@ impl Welcome {
     pub async fn update(
         self,
         browser: &mut tf::WebDriver,
-        cache: std::sync::Arc<std::sync::RwLock<crate::common::cache::Cache<url::Url, crate::backend::goodreads::book::Book>>>,
+        cache: std::sync::Arc<
+            std::sync::RwLock<
+                crate::common::cache::Cache<url::Url, crate::backend::goodreads::book::Book>,
+            >,
+        >,
         input: Input,
     ) -> Result<(State, Option<goodreads::Output>), Error> {
         match input {
