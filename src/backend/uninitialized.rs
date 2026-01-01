@@ -11,6 +11,8 @@ pub enum Error {
     BrowserConnection(String),
     #[error("")]
     Other(String),
+        #[error("{0}")]
+    Cache(#[from] cache::Error),
 }
 
 impl From<Error> for backend::Error {
@@ -24,7 +26,7 @@ pub enum Input {
     Launch {
         browser_driver_config: browser::DriverConfig,
         mode: Mode,
-        cache: cache::Config,
+        cache_config: cache::Config,
     },
     Tick,
 }
@@ -70,33 +72,33 @@ impl From<Uninitialized> for State {
 #[derive(Clone, Debug, Default)]
 pub struct Uninitialized {}
 
-impl Uninitialized {
+impl Uninitialized
+{
     pub async fn update(
         self,
         connection: &mut Option<browser::Connection>,
-        cache_config: &mut cache::Config,
         input: Input,
     ) -> Result<(State, Option<backend::Output>), Error> {
         match input {
             Input::Launch {
                 browser_driver_config,
                 mode,
-                cache,
+                cache_config,
             } => {
-                *cache_config = cache;
-
                 if connection.is_none() {
                     match browser::Connection::new(&browser_driver_config).await {
                         Ok(new_connection) => *connection = Some(new_connection),
-                        Err(error) => return Err(Error::BrowserConnection(error.to_string())),
+        Err(error) => return Err(Error::BrowserConnection(error.to_string())),
                     }
                 }
 
                 match mode {
-                    Mode::Goodreads => Ok((
-                        State::Goodreads(backend::goodreads::welcome::Welcome::default().into()),
+                    Mode::Goodreads => {
+                        let cache = std::sync::Arc::new(std::sync::RwLock::new(cache_config.try_into()?));
+                        Ok((
+                        State::Goodreads{cache , state: backend::goodreads::welcome::Welcome::default().into()},
                         Some(Output::Initialized(mode).into()),
-                    )),
+                    ))},
                     Mode::Steam => todo!(),
                 }
             }

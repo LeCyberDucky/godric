@@ -68,12 +68,6 @@ impl Default for State {
     }
 }
 
-impl From<State> for crate::backend::State {
-    fn from(state: State) -> Self {
-        Self::Goodreads(state)
-    }
-}
-
 impl State {
     pub async fn update(
         self,
@@ -82,10 +76,11 @@ impl State {
         input: Input,
     ) -> Result<(backend::State, Option<backend::Output>), Error> {
         let (state, output) = match self {
-            State::Welcome(state) => state.update(browser, cache, input.try_into()?).await?,
+            State::Welcome(state) => state.update(browser, cache.clone(), input.try_into()?).await?,
             State::Home(state) => state.update(browser, input.try_into()?).await?,
         };
 
-        Ok((state.into(), output.map(|output| output.into())))
+        let state = backend::State::Goodreads { cache, state };
+        Ok((state, output.map(|output| output.into())))
     }
 }

@@ -113,7 +113,7 @@ impl Launch {
                                 headless: self.browser_headless,
                             },
                             mode: self.mode,
-                            cache: self.cache.clone(),
+                            cache_config: self.cache.clone(),
                         }
                         .into(),
                     )

@@ -5,7 +5,7 @@ use color_eyre::{Result, eyre::ContextCompat};
 use tokio::sync::mpsc;
 
 use self::uninitialized::Uninitialized;
-use crate::common::browser;
+use crate::common::{browser, cache};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -67,7 +67,7 @@ pub enum Output {
 #[derive(Debug)]
 pub enum State {
     Uninitialized(Uninitialized),
-    Goodreads(goodreads::State),
+    Goodreads{cache: std::sync::Arc<std::sync::RwLock<crate::common::cache::Cache<url::Url, crate::backend::goodreads::book::Book>>>, state: goodreads::State},
     Error,
 }
 
@@ -78,23 +78,24 @@ impl Default for State {
 }
 
 #[derive(Debug, Default)]
-pub struct Backend {
+pub struct Backend
+{
     browser_connection: Option<browser::Connection>,
-    cache: crate::common::cache::Config,
     state: State,
 }
 
-impl Backend {
+impl Backend
+{
     pub async fn update(mut self, input: Input) -> (Self, Result<Option<Output>, Error>) {
         let state_description = format!("{:?}", self.state);
         let input_description = format!("{input:?}");
         let outcome: Result<(State, Option<Output>), Error> = match self.state {
             State::Uninitialized(state) if let Ok(input) = input.clone().try_into() => state
-                .update(&mut self.browser_connection, &mut self.cache, input)
+                .update(&mut self.browser_connection, input)
                 .await
                 .map_err(|error| error.into()),
 
-            State::Goodreads(state) if let Ok(input) = input.clone().try_into() => {
+            State::Goodreads{cache, state} if let Ok(input) = input.clone().try_into() => {
                 let connection = self
                     .browser_connection
                     .as_mut()
@@ -102,7 +103,7 @@ impl Backend {
 
                 match connection {
                     Ok(connection) => state
-                        .update(&mut connection.browser, self.cache.clone(), input)
+                        .update(&mut connection.browser, cache.clone(), input)
                         .await
                         .map_err(|error| error.into()),
                     Err(error) => {
