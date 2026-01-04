@@ -142,11 +142,12 @@ V: CacheValue
         // Fail if nothing works
         let directory = config.get_subdirectory().map_err(|e|Error::Io(e.to_string()))?;
         let index_path = directory.join("index.ron");
-        let index_file = std::fs::File::options()
-            .create(true)
-            .read(true)
-            .open(&index_path).map_err(|e|Error::Io(e.to_string()))?;
-        let index = ron::de::from_reader(std::io::BufReader::new(&index_file))?;
+        let index = if let Ok(index_file) = std::fs::File::open(&index_path) {
+            ron::de::from_reader(std::io::BufReader::new(&index_file))?
+        }
+        else {
+            HashMap::new()
+        };
 
         Ok(Self {
             index,
