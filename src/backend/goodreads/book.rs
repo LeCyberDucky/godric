@@ -65,30 +65,18 @@ impl Book {
     pub async fn fetch(
         url: url::Url,
         client: &reqwest::Client,
-        cache: std::sync::Arc<std::sync::RwLock<cache::Cache<url::Url, Book>>>,
+        cache: std::sync::Arc<tokio::sync::RwLock<cache::Cache<url::Url, Book>>>,
     ) -> Result<Self, Error> {
         // Attempt to load book from cache
-        if let Some(book) = cache
-            .read()
-            .map_err(|e| cache::Error::Concurrency(e.to_string()))?
-            .get(&url)
-            .cloned()
-        {
+        if let Some(book) = cache.read().await.get(&url).cloned() {
             return Ok(book);
         }
 
         // Download book from the internet and cache it, if unable to load from cache
         let (mut book, image_source) = Self::download(url.clone(), client).await?;
-        let cache_directory = cache
-            .read()
-            .map_err(|e| cache::Error::Concurrency(e.to_string()))?
-            .directory()
-            .to_path_buf();
+        let cache_directory = cache.read().await.directory().to_path_buf();
         book.cover_cache = cache_book_cover(image_source, cache_directory, client).await?;
-        cache
-            .write()
-            .map_err(|e| cache::Error::Concurrency(e.to_string()))?
-            .push(url, book.clone())?;
+        cache.write().await.push(url, book.clone())?;
 
         Ok(book)
     }
@@ -205,7 +193,7 @@ pub struct BookList {
     pub queue:
         std::pin::Pin<Box<dyn futures::Stream<Item = (url::Url, Result<Book, Error>)> + Send>>,
     books: Vec<Book>,
-    cache: std::sync::Arc<std::sync::RwLock<cache::Cache<url::Url, Book>>>,
+    cache: std::sync::Arc<tokio::sync::RwLock<cache::Cache<url::Url, Book>>>,
 }
 
 impl std::fmt::Debug for BookList {
@@ -220,7 +208,7 @@ impl BookList {
     pub fn new(
         urls: Vec<url::Url>,
         http_client: reqwest::Client,
-        cache: std::sync::Arc<std::sync::RwLock<cache::Cache<url::Url, Book>>>,
+        cache: std::sync::Arc<tokio::sync::RwLock<cache::Cache<url::Url, Book>>>,
     ) -> Result<Self> {
         let number_of_urls = urls.len();
         let mut work = vec![];

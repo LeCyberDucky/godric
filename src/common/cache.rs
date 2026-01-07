@@ -12,8 +12,6 @@ pub enum Error {
     Deserialization(#[from] ron::de::SpannedError),
     #[error("Serialization failed")]
     Serialization(#[from] ron::Error),
-    #[error("Cache concurrency access error")]
-    Concurrency(String),
 }
 
 #[derive(Clone, Debug)]

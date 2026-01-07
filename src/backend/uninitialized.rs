@@ -94,7 +94,7 @@ impl Uninitialized {
                 match mode {
                     Mode::Goodreads => {
                         let cache =
-                            std::sync::Arc::new(std::sync::RwLock::new(cache_config.try_into()?));
+                            std::sync::Arc::new(tokio::sync::RwLock::new(cache_config.try_into()?));
                         Ok((
                             State::Goodreads {
                                 cache,

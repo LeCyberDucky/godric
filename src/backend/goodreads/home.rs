@@ -75,7 +75,7 @@ impl Home {
     pub fn new(
         user_id: String,
         books: Vec<BookInfo>,
-        cache: std::sync::Arc<std::sync::RwLock<crate::common::cache::Cache<url::Url, Book>>>,
+        cache: std::sync::Arc<tokio::sync::RwLock<crate::common::cache::Cache<url::Url, Book>>>,
     ) -> Result<Self> {
         let books: Vec<_> = books.into_iter().map(|info| info.url).collect();
         let books = BookList::new(books, reqwest::Client::new(), cache)?;

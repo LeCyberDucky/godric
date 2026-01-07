@@ -73,7 +73,7 @@ impl State {
         self,
         browser: &mut tf::WebDriver,
         cache: std::sync::Arc<
-            std::sync::RwLock<
+            tokio::sync::RwLock<
                 crate::common::cache::Cache<url::Url, crate::backend::goodreads::book::Book>,
             >,
         >,
