@@ -23,6 +23,7 @@ use tempfile::TempDir;
 pub struct Home {
     books: Vec<(url::Url, Option<Result<Book, book::Error>>)>,
     selected_book: Option<usize>,
+    cover_placeholder: iced::widget::image::Handle
 }
 
 impl Default for Home {
@@ -30,6 +31,7 @@ impl Default for Home {
         Self {
             books: Default::default(),
             selected_book: Default::default(),
+            cover_placeholder: iced::widget::image::Handle::from_bytes(book::COVER_PLACEHOLDER_THUMBNAIL)
         }
     }
 }
@@ -165,17 +167,15 @@ impl Home {
         /*****************
          * Grid of books *
          *****************/
-        let cover_placeholder =
-            iced::widget::image::Handle::from_bytes(book::COVER_PLACEHOLDER_THUMBNAIL);
         let covers: Vec<_> = self
             .books
             .iter()
             .map(|(url, book)| match book {
                 Some(book) => match book {
                     Ok(book) => &book.thumbnail,
-                    Err(error) => &cover_placeholder,
+                    Err(error) => &self.cover_placeholder,
                 },
-                None => &cover_placeholder,
+                None => &self.cover_placeholder,
             })
             .collect();
 
