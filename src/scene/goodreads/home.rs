@@ -23,7 +23,6 @@ use tempfile::TempDir;
 pub struct Home {
     books: Vec<(url::Url, Option<Result<Book, book::Error>>)>,
     selected_book: Option<usize>,
-    cache_directory: Arc<TempDir>, // TempDir isn't Clone, so we arc it
 }
 
 impl Default for Home {
@@ -31,9 +30,6 @@ impl Default for Home {
         Self {
             books: Default::default(),
             selected_book: Default::default(),
-            cache_directory: TempDir::new()
-                .expect("Failed to create temporary directory to store book covers")
-                .into(),
         }
     }
 }
@@ -89,10 +85,6 @@ impl Home {
             books,
             ..Default::default()
         }
-    }
-
-    pub fn cache_path(&self) -> PathBuf {
-        self.cache_directory.path().to_path_buf()
     }
 
     pub fn update(

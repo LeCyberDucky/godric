@@ -90,7 +90,6 @@ impl Welcome {
                     let inner_state = super::home::Home::new(
                         books.into_iter().map(|info| (info.url, None)).collect(),
                     );
-                    let cache_path = inner_state.cache_path();
                     state = Some(State::Home(inner_state));
                 }
             },
