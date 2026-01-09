@@ -142,27 +142,16 @@ impl Home {
         // Display blurb
         // Display page count
 
-        let book = if let Some(id) = self.selected_book
-            && let (url, Some(book)) = &self.books[id]
-        {
-            book
-        } else {
-            &Ok(self.placeholder.clone())
-        };
-
-        let book = book
-            .as_ref()
-            .expect("Handling of books that failed to download not yet implemented");
+        let book = self
+            .selected_book
+            .and_then(|id| self.books[id].1.as_ref())
+            .and_then(|book| book.as_ref().ok())
+            .unwrap_or(&self.placeholder);
 
         let comparisons = iced::widget::row![
-            self.book_comparison(book.clone()),
-            self.book_comparison(self.placeholder.clone())
+            self.book_comparison(book),
+            self.book_comparison(&self.placeholder)
         ];
-
-        // let book = match self.selected_book {
-        //     Some(id) => self.books[id],
-        //     None => todo!(),
-        // };
 
         /*****************
          * Grid of books *
@@ -217,15 +206,15 @@ impl Home {
         iced::widget::column![comparisons, grid].into()
     }
 
-    fn book_comparison(&self, book: book::Book) -> iced::Element<'_, Message> {
+    fn book_comparison<'a>(&self, book: &'a book::Book) -> iced::Element<'a, Message> {
         let comparison = iced::widget::row![
-            iced::widget::image(book.thumbnail).height(iced::Fill),
+            iced::widget::image(book.thumbnail.clone()).height(iced::Fill),
             iced::widget::column![
-                iced::widget::container(iced::widget::text(book.info.title)).padding(5),
-                iced::widget::container(iced::widget::text(book.info.author)).padding(5),
+                iced::widget::container(iced::widget::text(&book.info.title)).padding(5),
+                iced::widget::container(iced::widget::text(&book.info.author)).padding(5),
                 iced::widget::rule::horizontal(2),
                 iced::widget::scrollable(
-                    iced::widget::container(iced::widget::text(book.info.blurb)).padding(5)
+                    iced::widget::container(iced::widget::text(&book.info.blurb)).padding(5)
                 )
                 .direction(scrollable::Direction::Vertical(scrollable::Scrollbar::new()))
                 .spacing(0)
