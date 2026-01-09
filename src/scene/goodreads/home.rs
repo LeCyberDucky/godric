@@ -194,7 +194,7 @@ impl Home {
         let grid_height = 1;
         let grid_spacing = 1;
 
-        scrollable(
+        let grid = scrollable(
             iced::widget::row({
                 let mut columns = vec![];
                 while grid_height <= covers.len() {
@@ -212,8 +212,11 @@ impl Home {
         )
         .horizontal()
         .auto_scroll(true)
-        .spacing(0)
-        .into()
+        .spacing(0);
+        // .into();
+
+        // iced::widget::container([comparisons]).into()
+        iced::widget::column![comparisons, grid].into()
     }
 
     fn book_comparison(&self, book: book::Book) -> iced::Element<'_, Message> {
