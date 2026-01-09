@@ -23,7 +23,7 @@ use tempfile::TempDir;
 pub struct Home {
     books: Vec<(url::Url, Option<Result<Book, book::Error>>)>,
     selected_book: Option<usize>,
-    cover_placeholder: iced::widget::image::Handle,
+    placeholder: Book
 }
 
 impl Default for Home {
@@ -31,9 +31,7 @@ impl Default for Home {
         Self {
             books: Default::default(),
             selected_book: Default::default(),
-            cover_placeholder: iced::widget::image::Handle::from_bytes(
-                book::COVER_PLACEHOLDER_THUMBNAIL,
-            ),
+            placeholder: Default::default(),
         }
     }
 }
@@ -149,7 +147,7 @@ impl Home {
         {
             book
         } else {
-            &Ok(book::Book::default())
+            &Ok(self.placeholder.clone())
         };
 
         let book = book
@@ -158,7 +156,7 @@ impl Home {
 
         let comparisons = iced::widget::row![
             self.book_comparison(book.clone()),
-            self.book_comparison(book::Book::default())
+            self.book_comparison(self.placeholder.clone())
         ];
 
         // let book = match self.selected_book {
@@ -175,9 +173,9 @@ impl Home {
             .map(|(url, book)| match book {
                 Some(book) => match book {
                     Ok(book) => &book.thumbnail,
-                    Err(error) => &self.cover_placeholder,
+                    Err(error) => &self.placeholder.thumbnail,
                 },
-                None => &self.cover_placeholder,
+                None => &self.placeholder.thumbnail,
             })
             .collect();
 
