@@ -212,6 +212,7 @@ impl Home {
         )
         .horizontal()
         .auto_scroll(true)
+        .spacing(0)
         .into()
     }
 
