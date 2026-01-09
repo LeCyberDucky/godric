@@ -217,7 +217,6 @@ impl Home {
     }
 
     fn book_comparison(&self, book: book::Book) -> iced::Element<'_, Message> {
-        // let book = book::Book::default();
         let comparison = iced::widget::row![
             iced::widget::image(book.thumbnail).height(iced::Fill),
             iced::widget::column![
@@ -227,7 +226,7 @@ impl Home {
                 iced::widget::scrollable(
                     iced::widget::container(iced::widget::text(book.info.blurb)).padding(5)
                 )
-                .direction(scrollable::Direction::Vertical(scrollable::Scrollbar::new())) // .spacing(5)
+                .direction(scrollable::Direction::Vertical(scrollable::Scrollbar::new()))
             ]
         ];
 
