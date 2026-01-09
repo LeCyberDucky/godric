@@ -191,7 +191,7 @@ impl Home {
             })
             .collect();
 
-        let grid_height = 3;
+        let grid_height = 1;
         let grid_spacing = 1;
 
         scrollable(
