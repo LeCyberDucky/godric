@@ -25,8 +25,14 @@ impl From<color_eyre::eyre::ErrReport> for Error {
 }
 
 #[derive(Clone, Debug)]
+pub enum Message {
+    Markdown(iced::widget::markdown::Uri),
+}
+
+#[derive(Clone, Debug)]
 pub struct Book {
     pub info: crate::backend::goodreads::book::Book,
+    pub blurb: Vec<iced::widget::markdown::Item>,
     pub thumbnail: iced::widget::image::Handle,
 }
 
@@ -47,8 +53,10 @@ impl TryFrom<crate::backend::goodreads::book::Book> for Book {
             thumbnail.height(),
             thumbnail.as_bytes().to_owned(),
         );
+        let blurb = iced::widget::markdown::parse(&info.blurb).collect();
         Ok(Self {
             info,
+            blurb,
             thumbnail: thumbnail,
         })
     }
@@ -56,9 +64,12 @@ impl TryFrom<crate::backend::goodreads::book::Book> for Book {
 
 impl Default for Book {
     fn default() -> Self {
+        let info = crate::backend::goodreads::book::Book::default();
+        let blurb = iced::widget::markdown::parse(&info.blurb).collect();
         let thumbnail = iced::widget::image::Handle::from_bytes(COVER_PLACEHOLDER_THUMBNAIL);
         Self {
-            info: Default::default(),
+            info,
+            blurb,
             thumbnail,
         }
     }
@@ -69,19 +80,25 @@ impl Book {
     pub const THUMBNAIL_WIDTH: u32 = 84;
     pub const THUMBNAIL_HEIGHT: u32 = 126;
 
-    pub fn view<'a, T: 'a>(&'a self) -> iced::Element<'a, T> {
+    pub fn view(&self) -> iced::Element<Message> {
         use iced::widget;
+
+        let blurb = widget::scrollable(
+            widget::container(
+                widget::markdown::view(&self.blurb, widget::Theme::TokyoNight)
+                    .map(Message::Markdown),
+            )
+            .padding(5),
+        )
+        .spacing(0);
+
         let display = widget::row![
             widget::image(self.thumbnail.clone()).height(iced::Fill),
             widget::column![
                 widget::container(widget::text(&self.info.title)).padding(5),
                 widget::container(widget::text(&self.info.author)).padding(5),
                 widget::rule::horizontal(2),
-                widget::scrollable(widget::container(widget::text(&self.info.blurb)).padding(5))
-                    .direction(widget::scrollable::Direction::Vertical(
-                        widget::scrollable::Scrollbar::new()
-                    ))
-                    .spacing(0)
+                blurb
             ]
         ];
 

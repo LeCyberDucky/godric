@@ -136,6 +136,11 @@ impl Book {
             (title, author, blurb, image_source)
         };
 
+        // Turn stuff into markdown, such that we can render it using Iced
+        let title = htmd::convert(&title).unwrap_or(title);
+        let author = htmd::convert(&author).unwrap_or(author);
+        let blurb = htmd::convert(&blurb).unwrap_or(blurb);
+
         Ok((
             Self {
                 url,

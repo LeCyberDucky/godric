@@ -49,6 +49,7 @@ pub enum Message {
         book: Result<crate::backend::goodreads::book::Book, crate::backend::goodreads::book::Error>,
     },
     BookSelected(usize),
+    BookDisplay(crate::scene::goodreads::book::Message),
 }
 
 impl From<Message> for scene::goodreads::Message {
@@ -121,6 +122,10 @@ impl Home {
                     }
                 }
                 Message::BookSelected(selection) => self.selected_book = Some(selection),
+                Message::BookDisplay(message) => {
+                    dbg!(message);
+                    todo!()
+                }
             },
             Err(error) => todo!(),
         }
@@ -142,7 +147,10 @@ impl Home {
             .and_then(|book| book.as_ref().ok())
             .unwrap_or(&self.placeholder);
 
-        let comparison = iced::widget::row![book.view(), self.placeholder.view()];
+        let comparison = iced::widget::row![
+            book.view().map(Message::BookDisplay),
+            self.placeholder.view().map(Message::BookDisplay)
+        ];
 
         /*****************
          * Grid of books *
