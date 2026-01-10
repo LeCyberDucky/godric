@@ -143,8 +143,8 @@ impl Home {
             .unwrap_or(&self.placeholder);
 
         let comparisons = iced::widget::row![
-            self.book_comparison(book),
-            self.book_comparison(&self.placeholder)
+            Self::book_comparison(book),
+            Self::book_comparison(&self.placeholder)
         ];
 
         /*****************
@@ -198,7 +198,7 @@ impl Home {
         iced::widget::column![comparisons, grid].into()
     }
 
-    fn book_comparison<'a>(&self, book: &'a book::Book) -> iced::Element<'a, Message> {
+    fn book_comparison(book: &book::Book) -> iced::Element<Message> {
         let comparison = iced::widget::row![
             iced::widget::image(book.thumbnail.clone()).height(iced::Fill),
             iced::widget::column![
