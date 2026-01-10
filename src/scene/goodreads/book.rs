@@ -83,6 +83,30 @@ impl Book {
     pub fn view(&self) -> iced::Element<Message> {
         use iced::widget;
 
+        let header = widget::row![
+            widget::image(self.thumbnail.clone()).height(iced::Fill),
+            widget::column![
+                widget::container(
+                    widget::column![
+                        widget::text(&self.info.title).font(iced::font::Font {
+                            weight: iced::font::Weight::Bold,
+                            ..Default::default()
+                        }),
+                        widget::text(&self.info.author).font(iced::font::Font {
+                            family: iced::font::Family::SansSerif,
+                            ..Default::default()
+                        })
+                    ]
+                    .spacing(2)
+                )
+                .padding(iced::padding::left(2)),
+                widget::rule::horizontal(2)
+            ]
+        ]
+        .align_y(iced::Bottom);
+
+        let header = widget::container(header).align_bottom(Self::THUMBNAIL_HEIGHT);
+
         let blurb = widget::scrollable(
             widget::container(
                 widget::markdown::view(&self.blurb, widget::Theme::TokyoNight)
@@ -90,17 +114,10 @@ impl Book {
             )
             .padding(5),
         )
+        .height(iced::Fill)
         .spacing(0);
 
-        let display = widget::row![
-            widget::image(self.thumbnail.clone()).height(iced::Fill),
-            widget::column![
-                widget::container(widget::text(&self.info.title)).padding(5),
-                widget::container(widget::text(&self.info.author)).padding(5),
-                widget::rule::horizontal(2),
-                blurb
-            ]
-        ];
+        let display = widget::column![header, blurb];
 
         display.into()
     }
