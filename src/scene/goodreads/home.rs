@@ -23,7 +23,7 @@ use tempfile::TempDir;
 pub struct Home {
     books: Vec<(url::Url, Option<Result<Book, book::Error>>)>,
     selected_book: Option<usize>,
-    placeholder: Book
+    placeholder: Book,
 }
 
 impl Default for Home {
@@ -228,6 +228,7 @@ impl Home {
                     iced::widget::container(iced::widget::text(book.info.blurb)).padding(5)
                 )
                 .direction(scrollable::Direction::Vertical(scrollable::Scrollbar::new()))
+                .spacing(0)
             ]
         ];
 
