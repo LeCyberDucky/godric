@@ -136,12 +136,6 @@ impl Home {
         /*******************
          * Book comparison *
          *******************/
-        // Display cover
-        // Display title
-        // Display author
-        // Display blurb
-        // Display page count
-
         let book = self
             .selected_book
             .and_then(|id| self.books[id].1.as_ref())
@@ -200,9 +194,7 @@ impl Home {
         .horizontal()
         .auto_scroll(true)
         .spacing(0);
-        // .into();
 
-        // iced::widget::container([comparisons]).into()
         iced::widget::column![comparisons, grid].into()
     }
 
