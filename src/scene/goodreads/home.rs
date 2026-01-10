@@ -150,48 +150,48 @@ impl Home {
         let covers: Vec<_> = self
             .books
             .iter()
-            .map(|(url, book)| match book {
-                Some(book) => match book {
-                    Ok(book) => &book.thumbnail,
-                    Err(error) => &self.placeholder.thumbnail,
-                },
-                None => &self.placeholder.thumbnail,
+            .map(|(_, book)| {
+                book.as_ref()
+                    .and_then(|book| book.as_ref().ok())
+                    .map(|book| &book.thumbnail)
+                    .unwrap_or(&self.placeholder.thumbnail)
             })
-            .collect();
-
-        let mut covers: Vec<_> = covers
-            .into_iter()
             .enumerate()
             .map(|(i, cover)| {
                 iced::widget::button(iced::widget::image(cover))
                     .on_press(Message::BookSelected(i))
                     .padding(iced::Padding::new(4.0))
+                    .into()
             })
             .collect();
 
-        let grid_height = 1;
-        let grid_spacing = 1;
-
-        let grid = scrollable(
-            iced::widget::row({
-                let mut columns = vec![];
-                while grid_height <= covers.len() {
-                    columns.push(covers.drain(..grid_height).collect::<Vec<_>>());
-                }
-                columns.push(std::mem::take(&mut covers));
-
-                columns.into_iter().map(|covers| {
-                    iced::widget::column(covers.into_iter().map(iced::Element::new))
-                        .spacing(grid_spacing)
-                        .into()
-                })
-            })
-            .spacing(grid_spacing),
-        )
-        .horizontal()
-        .auto_scroll(true)
-        .spacing(0);
+        let grid = grid(covers, 1, 1);
 
         iced::widget::column![comparison, grid].into()
     }
+}
+
+fn grid(
+    mut items: Vec<iced::Element<Message>>,
+    column_height: usize,
+    spacing: u32,
+) -> iced::Element<Message> {
+    let mut columns = Vec::new();
+    while items.len() >= column_height {
+        columns.push(items.drain(..column_height).collect());
+    }
+    if !items.is_empty() {
+        columns.push(items);
+    }
+    let row = iced::widget::row(
+        columns
+            .into_iter()
+            .map(|column| iced::widget::column(column).spacing(spacing).into()),
+    )
+    .spacing(spacing);
+    iced::widget::scrollable(row)
+        .horizontal()
+        .auto_scroll(true)
+        .spacing(spacing)
+        .into()
 }
