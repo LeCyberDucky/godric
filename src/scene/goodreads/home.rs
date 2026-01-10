@@ -142,10 +142,7 @@ impl Home {
             .and_then(|book| book.as_ref().ok())
             .unwrap_or(&self.placeholder);
 
-        let comparisons = iced::widget::row![
-            Self::book_comparison(book),
-            Self::book_comparison(&self.placeholder)
-        ];
+        let comparison = iced::widget::row![book.view(), self.placeholder.view()];
 
         /*****************
          * Grid of books *
@@ -195,24 +192,6 @@ impl Home {
         .auto_scroll(true)
         .spacing(0);
 
-        iced::widget::column![comparisons, grid].into()
-    }
-
-    fn book_comparison(book: &book::Book) -> iced::Element<Message> {
-        let comparison = iced::widget::row![
-            iced::widget::image(book.thumbnail.clone()).height(iced::Fill),
-            iced::widget::column![
-                iced::widget::container(iced::widget::text(&book.info.title)).padding(5),
-                iced::widget::container(iced::widget::text(&book.info.author)).padding(5),
-                iced::widget::rule::horizontal(2),
-                iced::widget::scrollable(
-                    iced::widget::container(iced::widget::text(&book.info.blurb)).padding(5)
-                )
-                .direction(scrollable::Direction::Vertical(scrollable::Scrollbar::new()))
-                .spacing(0)
-            ]
-        ];
-
-        comparison.into()
+        iced::widget::column![comparison, grid].into()
     }
 }

@@ -30,12 +30,6 @@ pub struct Book {
     pub thumbnail: iced::widget::image::Handle,
 }
 
-impl Book {
-    // 6x9 is a common aspect ratio for fiction books. See: https://blog.reedsy.com/guide/book-design/book-cover-dimensions/
-    pub const THUMBNAIL_WIDTH: u32 = 84;
-    pub const THUMBNAIL_HEIGHT: u32 = 126;
-}
-
 impl TryFrom<crate::backend::goodreads::book::Book> for Book {
     type Error = Error;
 
@@ -67,6 +61,31 @@ impl Default for Book {
             info: Default::default(),
             thumbnail,
         }
+    }
+}
+
+impl Book {
+    // 6x9 is a common aspect ratio for fiction books. See: https://blog.reedsy.com/guide/book-design/book-cover-dimensions/
+    pub const THUMBNAIL_WIDTH: u32 = 84;
+    pub const THUMBNAIL_HEIGHT: u32 = 126;
+
+    pub fn view<'a, T: 'a>(&'a self) -> iced::Element<'a, T> {
+        use iced::widget;
+        let display = widget::row![
+            widget::image(self.thumbnail.clone()).height(iced::Fill),
+            widget::column![
+                widget::container(widget::text(&self.info.title)).padding(5),
+                widget::container(widget::text(&self.info.author)).padding(5),
+                widget::rule::horizontal(2),
+                widget::scrollable(widget::container(widget::text(&self.info.blurb)).padding(5))
+                    .direction(widget::scrollable::Direction::Vertical(
+                        widget::scrollable::Scrollbar::new()
+                    ))
+                    .spacing(0)
+            ]
+        ];
+
+        display.into()
     }
 }
 
