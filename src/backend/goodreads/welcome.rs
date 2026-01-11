@@ -113,11 +113,9 @@ fn store_booklist(books: &Vec<goodreads::book::BookInfo>) {
     let output_file = std::fs::File::create("./Data/booklist.ron")
         .expect("Failed to create booklist output file");
     let mut writer = std::io::BufWriter::new(output_file);
-    ron::Options::default().to_io_writer_pretty(
-        &mut writer,
-        books,
-        ron::ser::PrettyConfig::default(),
-    );
+    ron::Options::default()
+        .to_io_writer_pretty(&mut writer, books, ron::ser::PrettyConfig::default())
+        .expect("Failed to write booklist to file");
     writer.flush().expect("Failed to flush booklist file");
 }
 

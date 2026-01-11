@@ -75,7 +75,7 @@ impl Welcome {
     ) {
         let mut output = None;
         let mut state = None;
-        let mut task = Task::none();
+        let task = Task::none();
 
         match message {
             Ok(message) => match message {

@@ -1,9 +1,6 @@
 use color_eyre::eyre::{Context, ContextCompat, Result};
 use futures::StreamExt;
-use image::GenericImage;
-use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
-use tempfile::TempDir;
 
 use crate::common::cache;
 

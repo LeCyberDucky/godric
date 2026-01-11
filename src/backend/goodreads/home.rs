@@ -8,7 +8,6 @@ use color_eyre::{
 };
 use iced::futures::stream::StreamExt;
 use scraper::{Html, Selector};
-use tempfile::TempDir;
 use thirtyfour as tf;
 
 #[derive(thiserror::Error, Debug)]

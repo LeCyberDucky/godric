@@ -5,7 +5,7 @@ use color_eyre::{Result, eyre::ContextCompat};
 use tokio::sync::mpsc;
 
 use self::uninitialized::Uninitialized;
-use crate::common::{browser, cache};
+use crate::common::browser;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {

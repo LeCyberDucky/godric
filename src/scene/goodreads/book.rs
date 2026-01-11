@@ -1,5 +1,3 @@
-use std::ops::{Deref, DerefMut};
-
 use color_eyre::eyre::{ContextCompat, Result};
 use image::GenericImage;
 
@@ -57,7 +55,7 @@ impl TryFrom<crate::backend::goodreads::book::Book> for Book {
         Ok(Self {
             info,
             blurb,
-            thumbnail: thumbnail,
+            thumbnail,
         })
     }
 }
@@ -80,7 +78,7 @@ impl Book {
     pub const THUMBNAIL_WIDTH: u32 = 84;
     pub const THUMBNAIL_HEIGHT: u32 = 126;
 
-    pub fn view(&self) -> iced::Element<Message> {
+    pub fn view(&self) -> iced::Element<'_, Message> {
         use iced::widget;
 
         let header = widget::row![
@@ -133,8 +131,7 @@ pub fn create_thumbnail(
         .sort_by_frequency(true)
         .srgb_palette()
         .into_iter()
-        .rev()
-        .next()
+        .next_back()
         .context("Failed to compute palette for image")?
         .into_format();
 

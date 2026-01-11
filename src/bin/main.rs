@@ -60,7 +60,9 @@ impl Godric {
         };
 
         if let Some(input) = input {
-            self.backend.send(input);
+            self.backend
+                .send(input)
+                .expect("Failed to communicate with backend.");
         }
 
         task

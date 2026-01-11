@@ -1,4 +1,4 @@
-use iced::{Task, Theme, widget::text_input::default};
+use iced::{Task, Theme};
 use strum::IntoEnumIterator;
 
 use crate::{

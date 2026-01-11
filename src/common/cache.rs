@@ -2,7 +2,6 @@ use crate::common::helpers::dir_is_valid;
 use color_eyre::eyre::Result;
 use std::{collections::HashMap, io::Write};
 use tempfile::TempDir;
-use thiserror::Error;
 
 #[derive(Clone, Debug, thiserror::Error)]
 pub enum Error {
@@ -179,7 +178,7 @@ where
     pub fn push(&mut self, key: K, value: V) -> Result<(), Error> {
         self.index.insert(key, value);
         let temp_file_path = self.directory.join("index.ron.tmp");
-        let mut temp_file =
+        let temp_file =
             std::fs::File::create(&temp_file_path).map_err(|e| Error::Io(e.to_string()))?;
         let mut writer = std::io::BufWriter::new(temp_file);
         ron::Options::default().to_io_writer_pretty(

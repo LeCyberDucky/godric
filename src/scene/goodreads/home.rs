@@ -1,39 +1,19 @@
-use std::{path::PathBuf, sync::Arc};
-
-use crate::{
-    backend::goodreads::book::BookInfo,
-    scene::{
-        self,
-        goodreads::{
-            State,
-            book::{self, Book},
-        },
+use crate::scene::{
+    self,
+    goodreads::{
+        State,
+        book::{self, Book},
     },
 };
 
 use color_eyre::Result;
-use iced::{
-    Task,
-    futures::{Stream, StreamExt},
-    widget::scrollable,
-};
-use tempfile::TempDir;
+use iced::Task;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Home {
     books: Vec<(url::Url, Option<Result<Book, book::Error>>)>,
     selected_book: Option<usize>,
     placeholder: Book,
-}
-
-impl Default for Home {
-    fn default() -> Self {
-        Self {
-            books: Default::default(),
-            selected_book: Default::default(),
-            placeholder: Default::default(),
-        }
-    }
 }
 
 impl From<Home> for State {
@@ -99,7 +79,6 @@ impl Home {
         Task<scene::goodreads::Message>,
     ) {
         let output: Option<crate::backend::goodreads::home::Input> = None;
-        let state = None;
 
         match message {
             Ok(message) => match message {
@@ -131,7 +110,7 @@ impl Home {
         }
 
         (
-            state.unwrap_or(self.into()),
+            self.into(),
             output.map(|output| output.into()),
             Task::none(),
         )
@@ -180,10 +159,10 @@ impl Home {
 }
 
 fn grid(
-    mut items: Vec<iced::Element<Message>>,
+    mut items: Vec<iced::Element<'_, Message>>,
     column_height: usize,
     spacing: u32,
-) -> iced::Element<Message> {
+) -> iced::Element<'_, Message> {
     let mut columns = Vec::new();
     while items.len() >= column_height {
         columns.push(items.drain(..column_height).collect());
