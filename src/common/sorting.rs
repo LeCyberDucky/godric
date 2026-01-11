@@ -9,12 +9,13 @@ pub enum Error {
     },
 }
 
+#[derive(Clone, Debug)]
 pub enum Half {
     Front,
     Back,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Sorting<T> {
     elements: Vec<T>,
     selection: usize,
@@ -33,6 +34,14 @@ impl<T> Default for Sorting<T> {
 }
 
 impl<T> Sorting<T> {
+    pub fn new(elements: Vec<T>) -> Self {
+        Self {
+            selection: 0,
+            search_space: 0..elements.len(),
+            elements,
+        }
+    }
+
     pub fn selection(&self) -> Option<&T> {
         // We assume that the selection is always in range
         self.elements.get(self.selection)
@@ -96,5 +105,13 @@ impl<T> Sorting<T> {
         }
 
         done
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, T> {
+        self.elements.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, T> {
+        self.elements.iter_mut()
     }
 }

@@ -1,8 +1,11 @@
-use crate::scene::{
-    self,
-    goodreads::{
-        State,
-        book::{self, Book},
+use crate::{
+    common::sorting::Sorting,
+    scene::{
+        self,
+        goodreads::{
+            State,
+            book::{self, Book},
+        },
     },
 };
 
@@ -11,8 +14,7 @@ use iced::Task;
 
 #[derive(Clone, Debug, Default)]
 pub struct Home {
-    books: Vec<(url::Url, Option<Result<Book, book::Error>>)>,
-    selected_book: Option<usize>,
+    books: Sorting<(url::Url, Option<Result<Book, book::Error>>)>,
     placeholder: Book,
 }
 
@@ -30,6 +32,9 @@ pub enum Message {
     },
     BookSelected(usize),
     BookDisplay(crate::scene::goodreads::book::Message),
+    Sort {
+        direction: crate::common::sorting::Half,
+    },
 }
 
 impl From<Message> for scene::goodreads::Message {
@@ -65,7 +70,7 @@ impl TryFrom<scene::goodreads::Message> for Message {
 impl Home {
     pub fn new(books: Vec<(url::Url, Option<Result<Book, book::Error>>)>) -> Self {
         Self {
-            books,
+            books: Sorting::new(books),
             ..Default::default()
         }
     }
@@ -100,10 +105,16 @@ impl Home {
                         None => todo!(),
                     }
                 }
-                Message::BookSelected(selection) => self.selected_book = Some(selection),
+                Message::BookSelected(selection) => self
+                    .books
+                    .select(selection)
+                    .expect("Selected book outside range."),
                 Message::BookDisplay(message) => {
                     dbg!(message);
                     todo!()
+                }
+                Message::Sort { direction } => {
+                    self.books.step(direction);
                 }
             },
             Err(error) => todo!(),
@@ -121,14 +132,32 @@ impl Home {
          * Book comparison *
          *******************/
         let book = self
-            .selected_book
-            .and_then(|id| self.books[id].1.as_ref())
+            .books
+            .selection()
+            .and_then(|selection| selection.1.as_ref())
+            .and_then(|book| book.as_ref().ok())
+            .unwrap_or(&self.placeholder);
+
+        let candidate = self
+            .books
+            .candidate()
+            .and_then(|candidate| candidate.1.as_ref())
             .and_then(|book| book.as_ref().ok())
             .unwrap_or(&self.placeholder);
 
         let comparison = iced::widget::row![
-            book.view().map(Message::BookDisplay),
-            self.placeholder.view().map(Message::BookDisplay)
+            iced::widget::column![
+                book.view().map(Message::BookDisplay),
+                iced::widget::button("Select").on_press(Message::Sort {
+                    direction: crate::common::sorting::Half::Front
+                })
+            ],
+            iced::widget::column![
+                candidate.view().map(Message::BookDisplay),
+                iced::widget::button("Select").on_press(Message::Sort {
+                    direction: crate::common::sorting::Half::Back
+                })
+            ]
         ];
 
         /*****************
