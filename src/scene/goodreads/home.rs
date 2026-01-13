@@ -145,18 +145,22 @@ impl Home {
             .and_then(|book| book.as_ref().ok())
             .unwrap_or(&self.placeholder);
 
+        let select_button = |direction| {
+            iced::widget::container(
+                iced::widget::button(iced::widget::text("Select").width(iced::Fill).center())
+                    .on_press(Message::Sort { direction }),
+            )
+            .padding(2)
+        };
+
         let comparison = iced::widget::row![
             iced::widget::column![
                 book.view().map(Message::BookDisplay),
-                iced::widget::button("Select").on_press(Message::Sort {
-                    direction: crate::common::sorting::Half::Front
-                })
+                select_button(crate::common::sorting::Half::Front)
             ],
             iced::widget::column![
                 candidate.view().map(Message::BookDisplay),
-                iced::widget::button("Select").on_press(Message::Sort {
-                    direction: crate::common::sorting::Half::Back
-                })
+                select_button(crate::common::sorting::Half::Back)
             ]
         ];
 
