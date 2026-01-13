@@ -72,19 +72,19 @@ impl<T> Sorting<T> {
         Ok(())
     }
 
+    fn search_space_middle(&self) -> usize {
+        let std::ops::Range { start, end } = self.search_space;
+        let middle = start + (end - start) / 2;
+        middle
+    }
+
     fn bisect(&mut self, half_to_keep: Half) {
         let middle = self.search_space_middle();
 
         match half_to_keep {
             Half::Front => self.search_space.end = middle,
-            Half::Back => self.search_space.start = middle,
+            Half::Back => self.search_space.start = middle + 1,
         }
-    }
-
-    fn search_space_middle(&self) -> usize {
-        let std::ops::Range { start, end } = self.search_space;
-        let middle = start + (end - start) / 2;
-        middle
     }
 
     fn move_selection(&mut self, target: usize) {
@@ -98,10 +98,16 @@ impl<T> Sorting<T> {
 
     pub fn step(&mut self, direction: Half) -> bool {
         self.bisect(direction);
-        let done = self.search_space.len() < 2;
+
+        let done = self.search_space.start == self.search_space.end;
         if done {
             // Placement found! Let's move the selection there!
-            self.move_selection(self.search_space.start);
+            let mut target = self.search_space.start;
+            if target > self.selection {
+                // Not sure why this is necessary, but it seems to be
+                target -= 1;
+            }
+            self.move_selection(target);
         }
 
         done
