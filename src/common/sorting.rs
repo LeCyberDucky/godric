@@ -15,30 +15,58 @@ pub enum Half {
     Back,
 }
 
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    PartialEq,
+    strum_macros::Display,
+    strum_macros::EnumString,
+    strum_macros::EnumIter,
+)]
+pub enum SearchSpace {
+    #[strum(to_string = "Full list")]
+    Full,
+    #[strum(to_string = "Left of selection")]
+    #[default]
+    Left,
+    #[strum(to_string = "Right of selection")]
+    Right,
+}
+
+impl SearchSpace {
+    fn to_range(&self, selection: usize, length: usize) -> std::ops::Range<usize> {
+        match self {
+            SearchSpace::Full => 0..length,
+            SearchSpace::Left => 0..selection,
+            SearchSpace::Right => (selection + 1).min(length)..length,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Sorting<T> {
     elements: Vec<T>,
     selection: usize,
-    search_space: std::ops::Range<usize>,
+    search_space: SearchSpace,
+    search_range: std::ops::Range<usize>,
 }
 
 impl<T> Default for Sorting<T> {
     fn default() -> Self {
-        let elements: Vec<T> = Default::default();
-        Self {
-            selection: 0,
-            search_space: 0..elements.len(),
-            elements,
-        }
+        Self::new(Vec::new())
     }
 }
 
 impl<T> Sorting<T> {
     pub fn new(elements: Vec<T>) -> Self {
+        let selection = 0;
+        let search_space = SearchSpace::default();
         Self {
-            selection: 0,
-            search_space: 0..elements.len(),
+            selection,
+            search_range: search_space.to_range(selection, elements.len()),
             elements,
+            search_space,
         }
     }
 
@@ -49,7 +77,7 @@ impl<T> Sorting<T> {
 
     pub fn candidate(&self) -> Option<&T> {
         // It shouldn't be possible to end up outside the search space
-        let mut index = self.search_space_middle();
+        let mut index = self.search_range_middle();
         if index == self.selection {
             // Avoid comparing the selection to itself
             // Not sure if we should compare to the previous or next neighbour. Guess it doesn't really matter
@@ -74,22 +102,21 @@ impl<T> Sorting<T> {
             .into());
         }
         self.selection = id;
-        self.search_space = 0..self.elements.len();
+        self.search_range = self.search_space.to_range(id, self.elements.len());
         Ok(())
     }
 
-    fn search_space_middle(&self) -> usize {
-        let std::ops::Range { start, end } = self.search_space;
-        let middle = start + (end - start) / 2;
-        middle
+    fn search_range_middle(&self) -> usize {
+        let std::ops::Range { start, end } = self.search_range;
+        start + (end - start) / 2
     }
 
     fn bisect(&mut self, half_to_keep: Half) {
-        let middle = self.search_space_middle();
+        let middle = self.search_range_middle();
 
         match half_to_keep {
-            Half::Front => self.search_space.end = middle,
-            Half::Back => self.search_space.start = middle + 1,
+            Half::Front => self.search_range.end = middle,
+            Half::Back => self.search_range.start = middle + 1,
         }
     }
 
@@ -105,10 +132,10 @@ impl<T> Sorting<T> {
     pub fn step(&mut self, direction: Half) -> bool {
         self.bisect(direction);
 
-        let done = self.search_space.start == self.search_space.end;
+        let done = self.search_range.start == self.search_range.end;
         if done {
             // Placement found! Let's move the selection there!
-            let mut target = self.search_space.start;
+            let mut target = self.search_range.start;
             let mut selection = self.selection;
             if target > selection {
                 // Not sure why this is necessary, but it seems to be
@@ -133,5 +160,16 @@ impl<T> Sorting<T> {
 
     pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, T> {
         self.elements.iter_mut()
+    }
+
+    pub fn search_space(&self) -> &SearchSpace {
+        &self.search_space
+    }
+
+    pub fn set_search_space(&mut self, config: SearchSpace) {
+        if config != self.search_space {
+            self.search_range = config.to_range(self.selection, self.elements.len());
+            self.search_space = config;
+        }
     }
 }

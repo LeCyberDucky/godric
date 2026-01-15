@@ -11,6 +11,7 @@ use crate::{
 
 use color_eyre::Result;
 use iced::Task;
+use strum::IntoEnumIterator;
 
 #[derive(Clone, Debug, Default)]
 pub struct Home {
@@ -35,6 +36,7 @@ pub enum Message {
     Sort {
         direction: crate::common::sorting::Half,
     },
+    SearchSpaceSelected(crate::common::sorting::SearchSpace),
 }
 
 impl From<Message> for scene::goodreads::Message {
@@ -116,6 +118,9 @@ impl Home {
                 Message::Sort { direction } => {
                     self.books.step(direction);
                 }
+                Message::SearchSpaceSelected(search_space) => {
+                    self.books.set_search_space(search_space)
+                }
             },
             Err(error) => todo!(),
         }
@@ -150,17 +155,16 @@ impl Home {
                 iced::widget::button(iced::widget::text("Select").width(iced::Fill).center())
                     .on_press(Message::Sort { direction }),
             )
-            .padding(2)
         };
 
         let comparison = iced::widget::row![
             iced::widget::column![
                 book.view().map(Message::BookDisplay),
-                select_button(crate::common::sorting::Half::Front)
+                select_button(crate::common::sorting::Half::Front).padding(iced::padding::right(1))
             ],
             iced::widget::column![
                 candidate.view().map(Message::BookDisplay),
-                select_button(crate::common::sorting::Half::Back)
+                select_button(crate::common::sorting::Half::Back).padding(iced::padding::left(1))
             ]
         ];
 
@@ -187,7 +191,37 @@ impl Home {
 
         let grid = grid(covers, 1, 1);
 
-        iced::widget::column![comparison, grid].into()
+        /************
+         * Settings *
+         ************/
+        let search_space_selection = {
+            let text = iced::widget::text("Search space:");
+
+            let list = iced::widget::pick_list(
+                crate::common::sorting::SearchSpace::iter()
+                    .map(|mode| mode.to_string())
+                    .collect::<Vec<_>>(),
+                Some(self.books.search_space().to_string()),
+                |selection| {
+                    Message::SearchSpaceSelected(
+                        crate::common::sorting::SearchSpace::try_from(selection.as_str())
+                            .expect("Invalid search space selected!"),
+                    )
+                },
+            );
+
+            iced::widget::container(
+                iced::widget::row![text, list]
+                    .align_y(iced::Alignment::Center)
+                    .spacing(2)
+                    .padding(2),
+            )
+            .align_right(iced::Fill)
+        };
+
+        iced::widget::column![comparison, grid, search_space_selection]
+            .spacing(2)
+            .into()
     }
 }
 
