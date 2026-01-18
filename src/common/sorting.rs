@@ -103,11 +103,19 @@ impl<T> Sorting<T> {
         if done {
             // Placement found! Let's move the selection there!
             let mut target = self.search_space.start;
-            if target > self.selection {
+            let mut selection = self.selection;
+            if target > selection {
                 // Not sure why this is necessary, but it seems to be
                 target -= 1;
             }
             self.move_selection(target);
+
+            // Select element after previous selection
+            if target <= selection {
+                selection = (selection + 1).min(self.elements.len().saturating_sub(1));
+            }
+            self.select(selection)
+                .expect("It shouldn't be possible to end up with an out of range selection.");
         }
 
         done
