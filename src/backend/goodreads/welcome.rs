@@ -79,7 +79,7 @@ impl Welcome {
             Input::LoginAttempt { credentials } => {
                 let (user_id, books) = if cfg!(feature = "mock_backend") {
                     let (user_id, books) = load_booklist_from_file();
-                    (user_id, books[0..=7].into())
+                    (user_id, books[0..=8].into())
                 } else {
                     let user_id = sign_in_to_goodreads(browser, &credentials).await?;
                     let books = super::home::fetch_booklist(&user_id)

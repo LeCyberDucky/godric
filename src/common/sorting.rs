@@ -49,7 +49,13 @@ impl<T> Sorting<T> {
 
     pub fn candidate(&self) -> Option<&T> {
         // It shouldn't be possible to end up outside the search space
-        self.elements.get(self.search_space_middle())
+        let mut index = self.search_space_middle();
+        if index == self.selection {
+            // Avoid comparing the selection to itself
+            // Not sure if we should compare to the previous or next neighbour. Guess it doesn't really matter
+            index = index.saturating_sub(1);
+        }
+        self.elements.get(index)
     }
 
     pub fn get_mut<I>(&mut self, index: I) -> Option<&mut I::Output>
