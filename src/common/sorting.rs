@@ -330,6 +330,44 @@ mod tests {
     }
 
     #[test]
+    fn exact_steps_even_number_of_elements() {
+        let mut sorting = Sorting::new(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        sorting.set_search_space(SearchSpace::Full);
+        sorting.select(7);
+        let mut done = sorting.step(Half::Front);
+        assert!(!done);
+        done = sorting.step(Half::Back);
+        assert!(!done);
+        done = sorting.step(Half::Front);
+        assert!(!done);
+        done = sorting.step(Half::Front);
+        assert!(done);
+        assert_eq!(
+            sorting.iter().cloned().collect::<Vec<_>>(),
+            vec![0, 1, 2, 7, 3, 4, 5, 6, 8, 9]
+        );
+    }
+
+    #[test]
+    fn exact_steps_uneven_number_of_elements() {
+        let mut sorting = Sorting::new(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        sorting.set_search_space(SearchSpace::Full);
+        sorting.select(7);
+        let mut done = sorting.step(Half::Front);
+        assert!(!done);
+        done = sorting.step(Half::Back);
+        assert!(!done);
+        done = sorting.step(Half::Front);
+        assert!(!done);
+        done = sorting.step(Half::Front);
+        assert!(done);
+        assert_eq!(
+            sorting.iter().cloned().collect::<Vec<_>>(),
+            vec![0, 1, 2, 7, 3, 4, 5, 6, 8, 9, 10]
+        );
+    }
+
+    #[test]
     fn step_then_select_next_element() {
         let mut sorting = Sorting::new(vec![3, 1, 2]);
         sorting.select(0).unwrap();
