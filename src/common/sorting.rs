@@ -111,12 +111,13 @@ impl<T> Sorting<T> {
         start + (end - start) / 2
     }
 
+    /// Shrinks the current half‑open search range by keeping either the front `[start, middle)` or back `[middle + 1, end)` portion.
     fn bisect(&mut self, half_to_keep: Half) {
         let middle = self.search_range_middle();
 
         match half_to_keep {
             Half::Front => self.search_range.end = middle,
-            Half::Back => self.search_range.start = middle + 1,
+            Half::Back => self.search_range.start = (middle + 1).min(self.search_range.end),
         }
     }
 
