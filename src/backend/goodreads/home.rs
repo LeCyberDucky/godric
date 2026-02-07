@@ -162,7 +162,7 @@ pub async fn fetch_booklist(user_id: &str) -> Result<Vec<BookInfo>, Error> {
         .collect::<Result<_, _>>()?;
 
     // Sort collection of books according to user sorting
-    books.sort_by(|a, b| a.0.cmp(&b.0));
+    books.sort_by_key(|a| a.0);
     let books: Vec<_> = books.into_iter().map(|entry| entry.1).collect();
 
     Ok(books)
