@@ -129,6 +129,8 @@ impl<T> Sorting<T> {
         self.selection = target;
     }
 
+    /// Performs a sorting step, discarding the half of the search range opposite the given step direction
+    /// returns true if the range has collapsed and hence the element has been placed
     pub fn step(&mut self, direction: Half) -> bool {
         self.bisect(direction);
 
@@ -171,5 +173,188 @@ impl<T> Sorting<T> {
             self.search_range = config.to_range(self.selection, self.elements.len());
             self.search_space = config;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // SearchSpace::to_range
+    #[test]
+    fn full_range_covers_all() {
+        let length = 10;
+        let range = SearchSpace::Full.to_range(3, length);
+        assert_eq!(range, 0..length);
+    }
+
+    #[test]
+    fn left_range_excludes_selection() {
+        let length = 10;
+        let selection = 4;
+        let range = SearchSpace::Left.to_range(selection, length);
+        assert_eq!(range, 0..selection);
+    }
+
+    #[test]
+    fn right_range_excludes_selection() {
+        let length = 10;
+        let selection = 4;
+        let range = SearchSpace::Right.to_range(selection, length);
+        assert_eq!(range, (selection + 1)..length);
+    }
+
+    #[test]
+    fn right_range_clamps_at_length() {
+        let length = 10;
+        let selection = 11;
+        let range = SearchSpace::Right.to_range(selection, length);
+        assert_eq!(range, length..length);
+    }
+
+    // select
+    #[test]
+    fn select_updates_selection_and_range() {
+        let mut sorting = Sorting::new(vec![1, 2, 3, 4]);
+        sorting.set_search_space(SearchSpace::Left);
+        sorting.select(2).unwrap();
+        assert_eq!(sorting.selection(), Some(&3));
+        assert_eq!(sorting.search_range, 0..2);
+    }
+
+    #[test]
+    fn select_rejects_out_of_bounds() {
+        let mut sorting = Sorting::new(vec![1, 2, 3]);
+        assert!(sorting.select(10).is_err());
+    }
+
+    // candidate
+    #[test]
+    fn candidate_is_middle_of_range() {
+        let mut sorting = Sorting::new(vec![10, 20, 30, 40, 50]);
+        sorting.set_search_space(SearchSpace::Full);
+        assert_eq!(sorting.candidate(), Some(&30));
+    }
+
+    #[test]
+    fn candidate_never_returns_selection() {
+        let mut sorting = Sorting::new(vec![10, 20, 30, 40, 50]);
+        sorting.set_search_space(SearchSpace::Full);
+        sorting.select(2).unwrap(); // selection = 30 
+        assert_ne!(sorting.candidate(), Some(&30));
+    }
+
+    // move_selection
+    #[test]
+    fn move_selection_rotates_left_segment() {
+        let mut sorting = Sorting::new(vec![1, 2, 3, 4]);
+        sorting.select(2).unwrap(); // selecting 3 
+        sorting.move_selection(0);
+        assert_eq!(
+            sorting.iter().cloned().collect::<Vec<_>>(),
+            vec![3, 1, 2, 4]
+        );
+        assert_eq!(sorting.selection(), Some(&3));
+    }
+
+    #[test]
+    fn move_selection_rotates_right_segment() {
+        let mut sorting = Sorting::new(vec![1, 2, 3, 4]);
+        sorting.select(1).unwrap(); // selecting 2 
+        sorting.move_selection(3);
+        assert_eq!(
+            sorting.iter().cloned().collect::<Vec<_>>(),
+            vec![1, 3, 4, 2]
+        );
+        assert_eq!(sorting.selection(), Some(&2));
+    }
+
+    // step
+    #[test]
+    fn step_front_halves_range() {
+        let mut sorting = Sorting::new(vec![1, 2, 3, 4, 5]);
+        sorting.set_search_space(SearchSpace::Full);
+        sorting.step(Half::Front);
+        assert_eq!(sorting.search_range, 0..2); // middle of 0..5 is 2 
+    }
+
+    #[test]
+    fn step_back_halves_range() {
+        let mut sorting = Sorting::new(vec![1, 2, 3, 4, 5]);
+        sorting.set_search_space(SearchSpace::Full);
+        sorting.step(Half::Back);
+        assert_eq!(sorting.search_range, 3..5);
+    }
+
+    // Search space configuration
+    #[test]
+    fn setting_search_space_recomputes_range() {
+        let mut sorting = Sorting::new(vec![10, 20, 30, 40]);
+        sorting.select(2).unwrap();
+        sorting.set_search_space(SearchSpace::Left);
+        assert_eq!(sorting.search_range, 0..2);
+        sorting.set_search_space(SearchSpace::Right);
+        assert_eq!(sorting.search_range, 3..4);
+    }
+
+    // Invariants
+    #[test]
+    fn selection_out_of_bounds_errors() {
+        let mut sorting = Sorting::new(vec![1, 2, 3, 4, 5]);
+        assert!(sorting.select(sorting.elements.len()).is_err())
+    }
+
+    #[test]
+    fn search_range_is_always_valid() {
+        let mut sorting = Sorting::new(vec![1, 2, 3, 4]);
+        for mode in [SearchSpace::Full, SearchSpace::Left, SearchSpace::Right] {
+            sorting.set_search_space(mode.clone());
+            let range = &sorting.search_range;
+            assert!(range.start <= range.end);
+            assert!(range.end <= sorting.elements.len());
+        }
+    }
+
+    // Integration
+    #[test]
+    fn step_until_done_places_element_correctly() {
+        let mut sorting = Sorting::new(vec![5, 1, 3, 4, 2]);
+        sorting.select(0).unwrap(); // selecting 5 
+        sorting.set_search_space(SearchSpace::Full);
+        while !sorting.step(Half::Back) {}
+        assert_eq!(
+            sorting.iter().cloned().collect::<Vec<_>>(),
+            vec![1, 3, 4, 2, 5]
+        );
+    }
+
+    #[test]
+    fn step_then_select_next_element() {
+        let mut sorting = Sorting::new(vec![3, 1, 2]);
+        sorting.select(0).unwrap();
+        while !sorting.step(Half::Back) {}
+        assert_eq!(sorting.selection(), Some(&1)); // next element after placing 3 
+    }
+
+    #[test]
+    fn placing_at_end_in_right_space_keeps_selection_in_range() {
+        let mut sorting = Sorting::new(vec![3, 1, 2]);
+        sorting.set_search_space(SearchSpace::Right);
+        sorting.select(0).unwrap(); // selecting 3
+        while !sorting.step(Half::Back) {}
+
+        // Assert: selection index is valid
+        assert!(
+            sorting.selection < sorting.elements.len(),
+            "selection index {} is out of range {}",
+            sorting.selection,
+            sorting.elements.len()
+        );
+
+        // Assert: selection() returns a valid element
+        assert!(
+            sorting.selection().is_some(),
+            "selection() unexpectedly returned None"
+        );
     }
 }
